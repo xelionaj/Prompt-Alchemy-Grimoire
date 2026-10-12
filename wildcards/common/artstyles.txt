@@ -2,6 +2,9 @@
 # ART STYLES - KREA2 (natural-language prose)
 # ============================================================
 
+# Amano Style
+A dark, ethereal blend of Gothic romance, Western grit, and futuristic fantasy in the iconic style of Yoshitaka Amano, rendered with loose brushwork, ink, and acrylics to achieve a dreamy watercolor-esque aesthetic; all heightened by dramatic shadows, stark black ink lines, and splotchy washes that create a haunting distressed atmosphere.
+
 # ANIME
 A clean modern 2D anime illustration with a polished key-visual look, confident linework and dark outlines, large expressive anime eyes with bright glossy catchlights, a simplified nose and small delicate mouth, softly stylized proportions, flat cel-shaded color with clearly banded light and shadow rather than smooth gradients, gentle ambient shadow, vivid saturated tones, hair in defined layered clumps with sharp highlight strands, smooth stylized skin with minimal texture, bright and cleanly drawn.
 

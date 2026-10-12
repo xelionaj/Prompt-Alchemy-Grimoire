@@ -4,7 +4,7 @@
 
 No wildcard syntax to learn. No `__token__` to type. Pick a theme, choose the categories you want, wire one output into your prompt, and generate.
 
-Ships with **5,331 hand-written entries** across **56 categories** and **8 themes** — plus a **192-tone, metatype-driven coloration bank** — art styles, cybernetics, outfits, Halloween costumes, environments, poses, ancestry, species, hair, eyes, physical features, skin tone, camera framing and more, all written for natural-language prompting.
+Ships with **5,371 hand-written entries** across **56 categories** and **8 themes** — plus a **192-tone, metatype-driven coloration bank** — art styles, cybernetics, outfits, Halloween costumes, environments, poses, ancestry, species, hair, eyes, physical features, skin tone, camera framing and more, all written for natural-language prompting.
 
 ---
 
@@ -125,8 +125,8 @@ Each theme is one of the owner's standalone wildcard releases, kept true to that
 
 | Theme | Categories |
 |---|---|
-| **_ghost.runner** *(cyberpunk)* | Outfits (309, 21 sections) · **Compression / Zentai Suits (144, 7 families — full-coverage armored suits)** · Tattoos (75) · Weapons / Carry (28) · Accent Palette (28) · Environments (360, 20 sections — interiors + exteriors) · Poses (29) |
-| **Whimsical Woods** *(dark fantasy)* | Outfits (408, 32 sections) · Tattoos (75) · Weapons / Carry (30) · Accent Palette (31) · Environments (360, 20 sections — interiors + exteriors) · Poses (28) · **Spell Casting** (15) · **Spell Effects** (20) |
+| **_ghost.runner** *(cyberpunk)* | Outfits (337, 21 sections) · **Compression / Zentai Suits (144, 7 families — full-coverage armored suits)** · Tattoos (75) · Weapons / Carry (28) · Accent Palette (28) · Environments (367, 20 sections — interiors + exteriors) · Poses (29) |
+| **Whimsical Woods** *(dark fantasy)* | Outfits (412, 32 sections) · Tattoos (75) · Weapons / Carry (30) · Accent Palette (31) · Environments (360, 20 sections — interiors + exteriors) · Poses (28) · **Spell Casting** (15) · **Spell Effects** (20) |
 | **Autumnal Oxidation** *(gothic autumn)* | Outfits (337, 12 goth substyles) · Accent Palette (23) · Environments (13) · Poses (23) |
 | **Cassette Futurism** *(retro analog sci-fi)* | Outfits (139, 14 sections) · Accent Palette (23) · Environments (24) · Poses (24) |
 | **All the Dresses** | Gowns & Dresses (530) · Eastern Attire (530, 11 sections) · Accent Palette (24) · Environments (13) · Poses (24, dance-forward) |
@@ -138,7 +138,7 @@ Each theme is one of the owner's standalone wildcard releases, kept true to that
 
 | Pack | Categories |
 |---|---|
-| **Art Style** | 12 styles — Anime, Anime Photo Realism, BKSTYLE, Gladas Style, Manga, Painterly, Painterly Photorealism, Photorealism, Pixel Art 16-Bit, Semi-Realism, Surreal, Western Comics (alphabetical; **a second Art Style dropdown can blend two**; leads the prompt; sits under Theme) |
+| **Art Style** | 13 styles — Amano Style, Anime, Anime Photo Realism, BKSTYLE, Gladas Style, Manga, Painterly, Painterly Photorealism, Photorealism, Pixel Art 16-Bit, Semi-Realism, Surreal, Western Comics (alphabetical; **a second Art Style dropdown can blend two**; leads the prompt; sits under Theme) |
 | **Common** | Ancestry (44, 16 sections — facial structure only) · Metatype / Species (39, 30 sections) |
 | **Cybernetics** | 17 augments — single/both limbs, jaw, torso, neural jack, + Partial Cyborg presets · 14 finish colors (— off — = chrome) |
 | **Hair** | **Bald** (on/off toggle) · Hair Color (49) · Hair Type (20) · Hair Style (53) |

@@ -1,4 +1,4 @@
-- Body Sliders set to off now emits no build description at all. Before, a Build preset picked earlier could still reach the prompt through the hidden preset dropdown. A Build preset now speaks only when the selector is set to preset.
-- If a saved workflow relied on a Build preset while Body Sliders was off (this includes workflows made before 0.9.13), its build line will be missing until you set the Body Sliders selector to preset.
-- Section headers fixed on newer ComfyUI frontends (1.53 and later), where the collapsible header rows disappeared after saving, loading or undoing.
+- New art style: Amano Style, a dark, ethereal ink-and-watercolor look. Art Style now offers 13 styles, and the new one appears in both Art Style dropdowns.
+- More outfits. _ghost.runner gains 28: Street Techwear grows to 43 and Samurai Streetwear to 17. Whimsical Woods gains 4, across Druid, Dancer and Witch.
+- _ghost.runner gains 7 new environments. These are longer, more detailed scene descriptions than the existing ones, spread across the Residential, Transit, Netrunning, Industrial, Rooftops and Street Level sections.
 - No node re-add is needed for this version. If you are updating from a version before 0.9.16, the earlier one-time re-add still applies.
