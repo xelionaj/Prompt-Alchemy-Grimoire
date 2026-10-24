@@ -1,7 +1,7 @@
 [project]
 name = "prompt-alchemy-grimoire"
 description = "Prompt composition and wildcard selector node for ComfyUI."
-version = "0.9.24"
+version = "0.9.25"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
 dependencies = []

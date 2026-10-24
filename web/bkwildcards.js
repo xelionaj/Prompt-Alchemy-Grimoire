@@ -18,11 +18,15 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
-const BUILD = "0.9.24";
+const BUILD = "0.9.25";
 const NODE = "BKWildcardSelector";
 const NODE_TITLE = "Prompt-Alchemy-Grimoire Selector";
 const HIDDEN_TYPE = "bkwildcards-hidden";
 const RESOLVED_WIDGET = "resolved";
+const RENDERER_PROFILE_WIDGET = "renderer_profile";
+const RENDERER_PROFILE_IDS = new Set([
+  "legacy-text", "krea-2", "flux", "anima", "z-image", "sdxl",
+]);
 const PROP_PROMPT = "bk_resolved";
 const PENDING_TEXT = "… generating …";
 const HEADER_TYPE = "bkwildcards-header";
@@ -733,6 +737,33 @@ function restoreResolved(node) {
 }
 
 /**
+ * The profile control now sits before the resolved-text display in the
+ * optional widget block. Older workflows stored these values in the opposite
+ * order (or had only the resolved value); recover both values before saving
+ * or previewing the migrated node.
+ */
+function normalizeRendererProfileOrder(node) {
+  try {
+    const profile = node?.widgets?.find((w) => w.name === RENDERER_PROFILE_WIDGET);
+    const resolved = node?.widgets?.find((w) => w.name === RESOLVED_WIDGET);
+    if (!profile || RENDERER_PROFILE_IDS.has(profile.value)) return;
+
+    const legacyResolved = profile.value;
+    const trailingProfile = resolved?.value;
+    profile.value = RENDERER_PROFILE_IDS.has(trailingProfile)
+      ? trailingProfile
+      : "legacy-text";
+
+    if (resolved && typeof legacyResolved === "string" &&
+        !RENDERER_PROFILE_IDS.has(legacyResolved) && !isStatusText(legacyResolved)) {
+      setResolved(node, legacyResolved, { persist: false });
+    }
+  } catch (err) {
+    console.warn("[Prompt-Alchemy-Grimoire] renderer widget migration failed:", err);
+  }
+}
+
+/**
  * Limit the Skin Tone dropdown to the selected Metatype's families (+ off/random).
  * Metatype-conditioned options: green tones never show for Human, undead never for
  * Android, etc. The Python resolver stays coherent regardless — this only narrows
@@ -770,6 +801,7 @@ function updateSkinToneOptions(node) {
 function attach(node, layout) {
   if (!node || !layout || node._bkAttached) return;
   node._bkAttached = true;
+  normalizeRendererProfileOrder(node);
   // Header clicks call this to recompute visibility (collapse/expand).
   node._bkApply = () => applyTheme(node, layout);
 

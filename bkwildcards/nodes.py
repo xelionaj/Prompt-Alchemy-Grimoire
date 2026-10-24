@@ -297,23 +297,9 @@ class BKWildcardSelector:
             },
         )
 
-        # Display box, declared after the legacy controls so it renders below them.
-        #
-        # NOTE: widget order is positional in a saved workflow's widgets_values
-        # array. Moving or inserting an input shifts every value after it.
-        # New widgets must be appended after this point to preserve saved values.
-        required["resolved"] = (
-            "STRING",
-            {
-                "default": "",
-                "multiline": True,
-                "tooltip": "The prompt this node produced. Filled in automatically; edits are ignored.",
-            },
-        )
-
-        # Appended after every legacy widget so serialized values in existing
-        # workflows keep their positional meaning. ComfyUI supplies this new
-        # dropdown's default when loading an older workflow.
+        # Keep both optional controls after every legacy selector, and place
+        # the profile before the resolved-text display inside this optional
+        # block. The frontend migrates older positional widget values.
         profiles = rendering.get_renderer_profiles().all()
         renderer_profile_input = (
             [profile.profile_id for profile in profiles],
@@ -322,13 +308,24 @@ class BKWildcardSelector:
                 "tooltip": "Select a prompt renderer profile. Current profiles preserve the selected text and formatting; model-specific transformations are added only when verified.",
             },
         )
+        resolved_input = (
+            "STRING",
+            {
+                "default": "",
+                "multiline": True,
+                "tooltip": "The prompt this node produced. Filled in automatically; edits are ignored.",
+            },
+        )
 
         return {
             "required": required,
             # Optional at the API schema level so older saved/API workflows
-            # that predate this selector continue to execute with the Python
-            # default. ComfyUI still exposes optional inputs as widgets.
-            "optional": {"renderer_profile": renderer_profile_input},
+            # can omit these controls and use their Python defaults. ComfyUI
+            # exposes optional entries as widgets in dictionary order.
+            "optional": {
+                "renderer_profile": renderer_profile_input,
+                "resolved": resolved_input,
+            },
             "hidden": {
                 "extra_pnginfo": "EXTRA_PNGINFO",
                 "unique_id": "UNIQUE_ID",

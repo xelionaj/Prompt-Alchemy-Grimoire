@@ -156,12 +156,16 @@ print(resolve_prompt(314159, ', ', 'Female', '_ghost.runner', {'common_art_style
         self.assertEqual(list(node.RETURN_TYPES), contract["return_types"])
         self.assertEqual(list(node.RETURN_NAMES), contract["return_names"])
         input_types = node.INPUT_TYPES()
-        # Preserve the old required widget ordering. Optional widgets still
-        # appear in the UI but old API prompts can omit this new field.
-        self.assertEqual(list(input_types["required"].keys()),
-                         contract["required_input_keys"])
+        # The legacy controls remain in their original order; the new profile
+        # appears before the resolved display in the optional widget block.
+        self.assertEqual(
+            list(input_types["required"].keys()),
+            contract["required_input_keys"][:-1],
+        )
         profile_widget = input_types["optional"]["renderer_profile"]
         self.assertEqual(profile_widget[1]["default"], "legacy-text")
+        self.assertEqual(list(input_types["optional"].keys()),
+                         ["renderer_profile", "resolved"])
 
     def test_node_build_selects_profile_and_keeps_default_compatible(self):
         scenario = BASELINE["scenarios"][0]
