@@ -16,6 +16,8 @@ Ships with **5,371 hand-written entries** across **56 categories** and **8 theme
 - [Themes and content](#themes-and-content)
 - [Features](#features)
 - [License](#license)
+- [Content provenance](CONTENT-PROVENANCE.md)
+- [Content schema proposal](CONTENT-SCHEMA.md)
 
 ---
 
@@ -90,7 +92,7 @@ Widgets are grouped into labelled sections. **Click any section header to collap
 
 ## Themes and content
 
-Each theme is one of the owner's standalone wildcard releases, kept true to that release.
+The bundled themes and wildcard entries are inherited from BKWILDCARDS. Their author, source, attribution, and CC BY-SA 4.0 boundary are recorded in [CONTENT-PROVENANCE.md](CONTENT-PROVENANCE.md).
 
 | Theme | Categories |
 |---|---|
@@ -176,4 +178,4 @@ Prompt-Alchemy-Grimoire includes two license boundaries.
 
 **Images you generate are yours.** No attribution requested, ShareAlike not asserted against output. The ShareAlike term exists to keep the wildcard library itself open, not to reach into your renders.
 
-This project is derived from BKWILDCARDS by bkidderz. The original software is MIT licensed; the inherited wildcard content in `wildcards/` is CC BY-SA 4.0. The original author also publishes wildcard content on Civitai.
+This project is derived from BKWILDCARDS by bkidderz. The inherited content attribution and the policy for future independently authored CC BY-SA 4.0 content are documented in [CONTENT-PROVENANCE.md](CONTENT-PROVENANCE.md).
