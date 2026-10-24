@@ -18,6 +18,7 @@ Ships with **5,371 hand-written entries** across **56 categories** and **8 theme
 - [License](#license)
 - [Content provenance](CONTENT-PROVENANCE.md)
 - [Content schema proposal](CONTENT-SCHEMA.md)
+- [Compatibility baseline](COMPATIBILITY-BASELINE.md)
 
 ---
 

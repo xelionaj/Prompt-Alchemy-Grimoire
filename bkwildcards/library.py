@@ -1,5 +1,5 @@
 """
-Wildcard library loader for Prompt-Alchemy-Grimoire.
+Legacy wildcard utilities and compatibility facade for Prompt-Alchemy-Grimoire.
 
 Layout
 ------
@@ -35,7 +35,6 @@ headers: ignored for plain categories, but a category declared
 section rather than the whole file.
 """
 
-import json
 import os
 import re
 import zlib
@@ -57,10 +56,9 @@ SELECT_SECTION = "section"
 
 
 def _prettify(stem):
-    s = re.sub(r"^(krea2bk|krea2-bk|bk)[_-]", "", stem)
-    s = re.sub(r"[_-]\d+$", "", s)
-    s = s.replace("_", " ").replace("-", " ").strip()
-    return s.title() if s else stem
+    """Compatibility wrapper for the catalog label formatter."""
+    from .catalog import _prettify as catalog_prettify
+    return catalog_prettify(stem)
 
 
 def read_lines(path):
@@ -99,7 +97,7 @@ def clean_section_name(header):
     if not h or h.startswith("=") or set(h) <= set("-—= "):
         return None
     h = h.lstrip("-—").strip()
-    h = re.split(r"\s*[\(\[]", h, 1)[0].strip()
+    h = re.split(r"\s*[\(\[]", h, maxsplit=1)[0].strip()
     if h in _VERBATIM_LABELS:
         # Check before rstrip so a verbatim label like "E.T." keeps its trailing dot.
         return h
@@ -164,134 +162,44 @@ def read_sections(path):
 
 
 def _load_pack(pack_dir, pack_name):
-    manifest = {}
-    manifest_path = os.path.join(pack_dir, "_pack.json")
-    if os.path.isfile(manifest_path):
-        try:
-            with open(manifest_path, "r", encoding="utf-8") as fh:
-                manifest = json.load(fh)
-        except (OSError, ValueError):
-            manifest = {}
-
-    pack = {
-        "pack": pack_name,
-        "label": manifest.get("label") or _prettify(pack_name),
-        "is_global": bool(manifest.get("global", pack_name == GLOBAL_PACK)),
-        "gender": manifest.get("gender") or None,
-    }
-
-    declared = {}
-    for entry in manifest.get("entries", []) or []:
-        fname = entry.get("file")
-        if fname:
-            declared.setdefault(fname, []).append(entry)
-
-    categories = []
-    for fname in sorted(os.listdir(pack_dir)):
-        if not fname.lower().endswith(".txt"):
-            continue
-        path = os.path.join(pack_dir, fname)
-        if not os.path.isfile(path):
-            continue
-
-        # One category per declared manifest entry for this file — normally one.
-        # Declaring the same file twice makes two independent dropdowns over a
-        # single content file (e.g. two Art Style pickers over one artstyles.txt,
-        # 0.9.19), so edits to the list apply to both with no duplicated file.
-        # Each must carry its own id (the key is {pack}_{id}). An undeclared file
-        # still yields exactly one default category, as before.
-        entries_for_file = declared.get(fname) or [{}]
-        stem = os.path.splitext(fname)[0]
-        lines_count = len(read_lines(path))
-        for entry in entries_for_file:
-            cid = entry.get("id") or re.sub(r"[^a-z0-9]+", "_", stem.lower()).strip("_")
-
-            select = entry.get("select", SELECT_TOGGLE)
-            section_names = []
-            if select == SELECT_SECTION:
-                section_names = [name for name, rows in read_sections(path) if name and rows]
-                if not section_names:
-                    # Declared section-select but the file has no usable headers.
-                    select = SELECT_TOGGLE
-
-            categories.append(
-                {
-                    "key": "{}_{}".format(pack_name, cid),
-                    "pack": pack_name,
-                    "pack_label": pack["label"],
-                    "is_global": pack["is_global"],
-                    "gender": pack["gender"],
-                    "id": cid,
-                    "group": entry.get("group"),
-                    "prompt_label": entry.get("prompt_label"),
-                    "label": entry.get("label") or _prettify(stem),
-                    "path": path,
-                    "order": entry.get("order", DEFAULT_ORDER),
-                    "display": entry.get("display", entry.get("order", DEFAULT_ORDER)),
-                    "default": bool(entry.get("default", False)),
-                    "select": select,
-                    "sections": section_names,
-                    "count": lines_count,
-                }
-            )
-    return pack, categories
+    """Compatibility wrapper for the legacy catalog pack reader."""
+    from .catalog import get_default_catalog
+    return get_default_catalog()._load_pack(pack_dir, pack_name)
 
 
 def _walk():
-    packs, cats = [], []
-    if not os.path.isdir(WILDCARD_ROOT):
-        return packs, cats
-    for pack_name in sorted(os.listdir(WILDCARD_ROOT)):
-        pack_dir = os.path.join(WILDCARD_ROOT, pack_name)
-        if not os.path.isdir(pack_dir) or pack_name.startswith((".", "_")):
-            continue
-        pack, pack_cats = _load_pack(pack_dir, pack_name)
-        packs.append(pack)
-        cats.extend(pack_cats)
-    return packs, cats
+    """Compatibility wrapper for the legacy catalog directory walk."""
+    from .catalog import get_default_catalog
+    return get_default_catalog()._walk()
 
 
 def scan():
-    """Every category, in output order."""
-    _, cats = _walk()
-    cats.sort(key=lambda c: (c["order"], c["pack"], c["id"]))
-    return cats
+    """Every category, in output order (legacy compatibility view)."""
+    from .catalog import get_default_catalog
+    return list(get_default_catalog().load().legacy_categories)
 
 
 def scan_packs():
-    """Every pack, including packs that currently hold no wildcard files.
-
-    Needed so a sex or theme can appear in its dropdown before any content has
-    been written for it.
-    """
-    packs, _ = _walk()
-    return packs
+    """Every pack, including packs without category files (legacy view)."""
+    from .catalog import get_default_catalog
+    return list(get_default_catalog().load().legacy_packs)
 
 
 def themes(packs):
     """Selectable theme labels. Global packs are not themes."""
-    out = []
-    for pack in packs:
-        if pack["is_global"]:
-            continue
-        if pack["label"] not in out:
-            out.append(pack["label"])
-    return out
+    from .catalog import themes as catalog_themes
+    return catalog_themes(packs)
 
 
 def theme_to_pack(packs):
-    return {p["label"]: p["pack"] for p in packs if not p["is_global"]}
+    from .catalog import theme_to_pack as catalog_theme_to_pack
+    return catalog_theme_to_pack(packs)
 
 
 def genders(packs):
     """Distinct gender values declared by packs, in pack order."""
-    out = []
-    for pack in packs:
-        g = pack["gender"]
-        if g and g not in out:
-            out.append(g)
-    return out
-
+    from .catalog import genders as catalog_genders
+    return catalog_genders(packs)
 
 def section_options(category):
     """Dropdown options for a section-select category."""

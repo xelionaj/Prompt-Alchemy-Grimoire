@@ -6,7 +6,7 @@ and purely cosmetic — if it is unreachable the extension does nothing and the
 node still behaves correctly, because theme gating is enforced in Python.
 """
 
-from . import library
+from . import catalog
 from . import nodes
 from . import sliders
 from . import skintones
@@ -20,12 +20,13 @@ except ImportError:  # pragma: no cover - not running inside ComfyUI
 
 
 def _payload():
-    packs = library.scan_packs()
-    cats = library.scan()
+    snapshot = catalog.get_default_catalog().load()
+    cats = snapshot.legacy_categories
     return {
-        "themes": library.themes(packs),
-        "theme_to_pack": library.theme_to_pack(packs),
-        "genders": library.genders(packs),
+        "themes": list(snapshot.theme_labels),
+        "theme_to_pack": snapshot.legacy_theme_to_pack,
+        "genders": list(snapshot.genders),
+        "sources": [source.as_dict() for source in snapshot.sources],
         "gender_off": nodes.GENDER_OFF,
         "gender_random": nodes.GENDER_RANDOM,
         "gender_fluid": nodes.GENDER_FLUID,
@@ -51,6 +52,8 @@ def _payload():
                 "count": c["count"],
                 "order": c["order"],
                 "select": c["select"],
+                "source_id": c["source_id"],
+                "provenance": c["provenance"],
             }
             for c in cats
         ],

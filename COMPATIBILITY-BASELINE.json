@@ -1,0 +1,191 @@
+{
+  "baseline_version": 1,
+  "captured_with": {
+    "source_commit": "f0366d5",
+    "python": "3.14.6",
+    "executable": "C:/Python314/python.exe",
+    "capture": "Direct calls to bkwildcards.nodes.resolve_prompt; ComfyUI UI/runtime was not launched."
+  },
+  "scenarios": [
+    {
+      "id": "female-cyberpunk-labeled",
+      "seed": 24680,
+      "gender": "Female",
+      "theme": "_ghost.runner",
+      "choices": {
+        "common_art_style": "Amano Style",
+        "female_build": "Athletic",
+        "cyberpunk_outfit": "Corpo Executive",
+        "cyberpunk_environment": "Corporate"
+      },
+      "label_mode": "labeled",
+      "mayhem": false,
+      "output_chars": 852,
+      "sha256_utf8": "d359fc3153869837d3535972ceb960e65f85b06d5eb3021a74ba8a7dc302eb3b",
+      "slider_state": null
+    },
+    {
+      "id": "random-gender-fantasy",
+      "seed": 13579,
+      "gender": "— random —",
+      "theme": "Whimsical Woods",
+      "choices": {
+        "common_art_style": "Anime",
+        "common_metatype": "— random —",
+        "female_build": "— random —",
+        "male_build": "— random —",
+        "fantasy_outfit": "Fighter / Warrior"
+      },
+      "label_mode": "labeled",
+      "mayhem": false,
+      "output_chars": 1014,
+      "sha256_utf8": "3050434047a8cef7d3eb4d35ee59a5d46de3651fc4b8f8d7386a86ecb16d3264",
+      "slider_state": null
+    },
+    {
+      "id": "fluid-dresses-plain",
+      "seed": 97531,
+      "gender": "Fluid",
+      "theme": "All the Dresses",
+      "choices": {
+        "common_art_style": "Anime",
+        "common_art_style_2": "Anime",
+        "dresses_dress": "— random —",
+        "female_face": "— random —",
+        "male_face": "— random —"
+      },
+      "label_mode": "comma-separated",
+      "mayhem": false,
+      "output_chars": 655,
+      "sha256_utf8": "30548e34475481fe23b18077f39264c1fc500dd16c469574168c76ecc72820c7",
+      "slider_state": null
+    },
+    {
+      "id": "mayhem-json",
+      "seed": 314159,
+      "gender": "Female",
+      "theme": "_ghost.runner",
+      "choices": {
+        "common_art_style": "Painterly",
+        "common_metatype": "Human"
+      },
+      "label_mode": "JSON",
+      "mayhem": true,
+      "output_chars": 1363,
+      "sha256_utf8": "245248e8e7a86882fa6fb1008ab311ed8ed086b3113d3e2854942b592de5e3cc",
+      "slider_state": null
+    },
+    {
+      "id": "slider-skin-bald",
+      "seed": 424242,
+      "gender": "Female",
+      "theme": "Whimsical Woods",
+      "choices": {
+        "common_art_style": "Photorealism",
+        "common_metatype": "Human",
+        "female_build": "— random —",
+        "hair_bald": true,
+        "body_sliders": "— random —",
+        "skin_tone": "— random —"
+      },
+      "label_mode": "labeled",
+      "mayhem": false,
+      "output_chars": 806,
+      "sha256_utf8": "52662c1719484bfbb8be84a1655f29be1b1296c78cea1001cf83abc123e42547",
+      "slider_state": {
+        "mode": "— random —",
+        "register": "feminine",
+        "values": {
+          "bust": 4,
+          "hips": 5,
+          "mass": 4,
+          "tone": 6,
+          "waist": 9
+        }
+      }
+    }
+  ],
+  "workflow_contract": {
+    "node_class": "BKWildcardSelector",
+    "display_name": "Prompt-Alchemy-Grimoire Selector",
+    "category": "Prompt-Alchemy-Grimoire",
+    "return_types": [
+      "STRING"
+    ],
+    "return_names": [
+      "prompt"
+    ],
+    "required_input_keys": [
+      "theme",
+      "common_art_style",
+      "common_art_style_2",
+      "gender",
+      "common_ancestry",
+      "common_metatype",
+      "body_sliders",
+      "female_build",
+      "male_build",
+      "body_mass",
+      "body_bust",
+      "body_waist",
+      "body_hips",
+      "body_tone",
+      "skin_tone",
+      "eyes_eye",
+      "female_face",
+      "male_face",
+      "female_nose",
+      "male_nose",
+      "female_lips",
+      "male_lips",
+      "common_cybernetics",
+      "common_cyber_color",
+      "hair_bald",
+      "hair_type",
+      "hair_style",
+      "hair_color",
+      "cyberpunk_tattoo",
+      "cyberpunk_outfit",
+      "cyberpunk_bodysuit",
+      "cyberpunk_weapon",
+      "cyberpunk_accent_palette",
+      "cyberpunk_environment",
+      "cyberpunk_pose",
+      "dresses_dress",
+      "dresses_eastern",
+      "dresses_accent_palette",
+      "dresses_environment",
+      "dresses_pose",
+      "autumnal_oxidation_outfit",
+      "autumnal_oxidation_accent_palette",
+      "autumnal_oxidation_environment",
+      "autumnal_oxidation_pose",
+      "cassette_futurism_outfit",
+      "cassette_futurism_accent_palette",
+      "cassette_futurism_environment",
+      "cassette_futurism_pose",
+      "lingerie_set",
+      "halloween_outfit",
+      "halloween_environment",
+      "halloween_pose",
+      "steampunk_outfit",
+      "steampunk_environment",
+      "steampunk_pose",
+      "fantasy_tattoo",
+      "fantasy_outfit",
+      "fantasy_weapon",
+      "fantasy_accent_palette",
+      "fantasy_environment",
+      "fantasy_pose",
+      "fantasy_spell_casting",
+      "fantasy_spell_effects",
+      "shots_angle",
+      "shots_framing",
+      "separator",
+      "seed",
+      "label_output",
+      "mayhem",
+      "resolved"
+    ]
+  }
+}
