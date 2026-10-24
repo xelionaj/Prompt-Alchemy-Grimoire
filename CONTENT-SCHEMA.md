@@ -153,7 +153,7 @@ Each line is one JSON object. `id`, `text`, and `section` (when the category is 
 
 ## Stable identity and seed compatibility
 
-Current draws create `random.Random(seed + CRC32(category_key))` and choose from a file's current ordered pool. Therefore:
+Current draws create `random.Random(seed + (CRC32(category_key) & 0x7FFFFFFF))` and choose from a file's current ordered pool. Therefore:
 
 - preserve each legacy category key exactly to retain its independent random stream; for new categories, assign a source-qualified stable key once and keep it;
 - changing labels or UI grouping must not change the random key;
