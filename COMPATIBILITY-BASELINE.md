@@ -38,6 +38,10 @@ The current profiles intentionally share the byte-compatible fragment text rende
 
 Official references currently recorded: [Krea 2 prompting guide](https://github.com/krea-ai/krea-2/blob/main/docs/prompting.md) and [Z-Image repository](https://github.com/Tongyi-MAI/Z-Image). Flux, Anima, and SDXL profiles currently make no model-specific prompt-format claims.
 
+### Live profile-selector check
+
+After restarting ComfyUI, its live `object_info` schema exposed all six profiles and reported `renderer_profile` as optional with default `legacy-text`. The user's previously saved ArtForm Krea 2 workflow, whose API payload initially omitted the newly introduced field, then completed successfully after the optional-input compatibility fix. It saved `image_2026-10-25_063.png` at 720 × 1280. The PNG contains both `workflow` and `prompt`; the embedded workflow records `renderer_profile: legacy-text`, and the embedded API prompt includes the same profile value. The produced image was visually inspected. The ComfyUI workflow and prompt metadata path is verified for the default profile; model-specific output differences remain intentionally absent.
+
 ## Substep 4.4 — Deterministic selection service
 
 `bkwildcards/selection.py` owns random-stream construction and legacy category draws. Existing category streams still use the exact `seed + (CRC32(key) & 0x7fffffff)` formula; gender, Mayhem, slider, skin-tone, and special category streams retain their previous seeds and key strings. Legacy section/file choice behavior remains delegated to the existing draw helper. New sources use the versioned SHA-256 source-key rule documented in `CONTENT-SCHEMA.md`, with a separate stable-entry-ID stream API. Selection tests compare the legacy formula and draw behavior directly, and verify qualified streams are repeatable across processes.
