@@ -30,6 +30,14 @@ The legacy selection logic now lives in `bkwildcards/composition.py` behind `Leg
 
 The automated regression tests cover the five original output hashes, renderer parity, repeated and cross-process fixed-seed output, Mayhem seed sensitivity and cross-theme picks, random Environment composition, `build()` integration, the saved-workflow node/widget contract, and deterministic stream compatibility. PNG metadata replay findings are recorded in substep 4.6 below.
 
+## Stage 5 — renderer profile contract
+
+`bkwildcards/contracts.py` defines immutable `RendererProfile` metadata and the `RendererProfileRegistry` protocol. `bkwildcards/rendering.py` registers stable IDs for `legacy-text`, `krea-2`, `flux`, `anima`, `z-image`, and `sdxl`. Each profile records its model family, known variants where explicitly listed, the fragment-preserving text strategy, current adapter output capabilities, and optional source references. `rendering.get_renderer()` and `rendering.render_for_profile()` resolve those IDs; unknown IDs fail explicitly.
+
+The current profiles intentionally share the byte-compatible fragment text renderer. They preserve all fragment text and the existing comma-separated, labeled, and JSON formats. The profile capability fields describe this selector adapter's single-string output; they do not claim that the underlying models lack negative or secondary prompt inputs. Model-specific transformations remain unimplemented until supported by primary model documentation and dedicated compatibility evidence. The node's saved widget layout is unchanged; callers of the compatibility `resolve_prompt()` facade can select a renderer with its additive `renderer_id` and `renderer_options` arguments.
+
+Official references currently recorded: [Krea 2 prompting guide](https://github.com/krea-ai/krea-2/blob/main/docs/prompting.md) and [Z-Image repository](https://github.com/Tongyi-MAI/Z-Image). Flux, Anima, and SDXL profiles currently make no model-specific prompt-format claims.
+
 ## Substep 4.4 — Deterministic selection service
 
 `bkwildcards/selection.py` owns random-stream construction and legacy category draws. Existing category streams still use the exact `seed + (CRC32(key) & 0x7fffffff)` formula; gender, Mayhem, slider, skin-tone, and special category streams retain their previous seeds and key strings. Legacy section/file choice behavior remains delegated to the existing draw helper. New sources use the versioned SHA-256 source-key rule documented in `CONTENT-SCHEMA.md`, with a separate stable-entry-ID stream API. Selection tests compare the legacy formula and draw behavior directly, and verify qualified streams are repeatable across processes.

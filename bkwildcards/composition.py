@@ -5,7 +5,8 @@ import re
 from . import catalog, library, selection, sliders, skintones
 from .contracts import CompositionRequest, PromptDocument, PromptFragment, SelectedEntry
 from .rendering import (
-    LABEL_LABELED, LABEL_JSON, LABEL_PLAIN, LegacyTextRenderer, _format_picks,
+    LABEL_LABELED, LABEL_JSON, LABEL_PLAIN, LegacyTextRenderer, get_renderer,
+    _format_picks,
     _label_mode,
 )
 
@@ -711,14 +712,16 @@ class LegacyPromptComposer:
 
 
 def resolve_prompt(seed, separator, gender=None, theme=None, choices=None,
-                   label_mode=LABEL_LABELED, mayhem=False):
+                   label_mode=LABEL_LABELED, mayhem=False, renderer_id=None,
+                   renderer_options=None):
     """Compatibility facade used by routes and older callers."""
     request = CompositionRequest(
         seed=int(seed), separator=separator, gender=gender, theme=theme,
         choices=choices or {}, label_mode=_label_mode(label_mode), mayhem=bool(mayhem),
+        renderer_id=renderer_id, renderer_options=renderer_options or {},
     )
     document = _DEFAULT_COMPOSER.compose(request, _CATALOG)
-    return _DEFAULT_RENDERER.render(document, {})
+    return get_renderer(request.renderer_id).render(document, request.renderer_options)
 
 
 _DEFAULT_COMPOSER = LegacyPromptComposer()

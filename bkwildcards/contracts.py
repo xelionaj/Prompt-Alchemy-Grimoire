@@ -255,3 +255,36 @@ class PromptRenderer(Protocol):
 
     def render(self, document: PromptDocument, options: Mapping[str, Any]) -> str:
         ...
+
+
+@dataclass(frozen=True)
+class RendererProfile:
+    """Descriptive model target plus the renderer strategy used for its text.
+
+    Capabilities describe this node's current text-output adapter, not every
+    feature a model family may support. Profiles intentionally do not rewrite
+    semantic fragment text unless a later, evidence-backed renderer opts in.
+    """
+
+    profile_id: str
+    label: str
+    model_family: str
+    variants: Tuple[str, ...]
+    renderer_id: str
+    prompt_style: str
+    supports_labeled_output: bool = True
+    supports_json_output: bool = True
+    supports_single_text_output: bool = True
+    supports_negative_prompt_output: bool = False
+    supports_secondary_prompt_output: bool = False
+    references: Tuple[str, ...] = ()
+
+
+class RendererProfileRegistry(Protocol):
+    """Resolves stable profile IDs without coupling composition to a model."""
+
+    def get(self, profile_id: Optional[str] = None) -> RendererProfile:
+        ...
+
+    def all(self) -> Tuple[RendererProfile, ...]:
+        ...

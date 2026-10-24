@@ -347,7 +347,11 @@ class BKWildcardSelector:
             choices=choices, label_mode=_label_mode(label_output), mayhem=bool(mayhem),
         )
         document = _PROMPT_COMPOSER.compose(request, _CATALOG)
-        prompt_text = _PROMPT_RENDERER.render(document, {})
+        # The legacy node does not yet expose a model-profile widget. Keep its
+        # output stable while allowing internal callers to select a registered
+        # profile through CompositionRequest in the next integration step.
+        renderer = rendering.get_renderer(request.renderer_id)
+        prompt_text = renderer.render(document, request.renderer_options)
         # The slider lane's effective values (rolled under — random —) ride
         # along in `properties` so the saved workflow and the PNG carry them.
         state = (mayhem_slider_state(seed, choices) if mayhem

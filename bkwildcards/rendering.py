@@ -2,7 +2,7 @@
 
 import json
 
-from .contracts import PromptDocument
+from .contracts import PromptDocument, RendererProfile
 
 # label_output modes (the Settings dropdown). Legacy saved workflows stored this
 # as a BOOLEAN; _label_mode() coerces True -> labeled, False -> comma-separated,
@@ -55,10 +55,11 @@ def _format_picks(picks, separator, mode):
     )
 
 
-class LegacyTextRenderer:
-    """Serialize the existing ordered picks without changing prompt bytes."""
+class FragmentTextRenderer:
+    """Render ordered semantic fragments using the established text formats."""
 
-    renderer_id = "legacy-text"
+    def __init__(self, renderer_id="legacy-text"):
+        self.renderer_id = renderer_id
 
     def render(self, document, options):
         options = dict(document.metadata, **(options or {}))
@@ -71,3 +72,74 @@ class LegacyTextRenderer:
             options.get("separator", ", "),
             _label_mode(options.get("label_mode", LABEL_LABELED)),
         )
+
+
+class LegacyTextRenderer(FragmentTextRenderer):
+    """Serialize legacy ordered picks without changing prompt bytes."""
+
+    def __init__(self):
+        super().__init__("legacy-text")
+
+
+class RendererProfileCatalog:
+    """Small immutable registry of stable model-target profile metadata."""
+
+    def __init__(self, profiles):
+        self._profiles = {profile.profile_id: profile for profile in profiles}
+
+    def get(self, profile_id=None):
+        key = profile_id or "legacy-text"
+        try:
+            return self._profiles[key]
+        except KeyError:
+            raise ValueError("Unknown renderer profile: {}".format(key))
+
+    def all(self):
+        return tuple(self._profiles.values())
+
+
+# Profiles share a fragment-preserving serializer for now. This is deliberate:
+# model-specific prompt transformations should only be added when backed by
+# concrete model guidance and compatibility tests. The profiles still provide
+# stable IDs, model-family/variant metadata, and a capability contract for
+# future adapters. This selector currently emits a single text output.
+_PROFILE_DATA = (
+    ("legacy-text", "Legacy text", "generic", (), ()),
+    ("krea-2", "Krea 2", "Krea 2", ("Turbo", "Raw"),
+     ("https://github.com/krea-ai/krea-2/blob/main/docs/prompting.md",)),
+    ("flux", "FLUX", "FLUX", (), ()),
+    ("anima", "Anima", "Anima", (), ()),
+    ("z-image", "Z-Image", "Z-Image", ("Turbo", "Base", "Omni-Base", "Edit"),
+     ("https://github.com/Tongyi-MAI/Z-Image",)),
+    ("sdxl", "SDXL", "Stable Diffusion XL", ("Base", "Refiner"), ()),
+)
+
+_PROFILES = RendererProfileCatalog(
+    RendererProfile(
+        profile_id=profile_id,
+        label=label,
+        model_family=model_family,
+        variants=variants,
+        renderer_id=profile_id,
+        prompt_style="fragment-preserving-text",
+        references=references,
+    )
+    for profile_id, label, model_family, variants, references in _PROFILE_DATA
+)
+
+
+def get_renderer_profiles():
+    return _PROFILES
+
+
+def get_renderer(profile_id=None):
+    """Return a renderer for a profile; unknown IDs fail clearly."""
+    profile = _PROFILES.get(profile_id)
+    if profile.profile_id == "legacy-text":
+        return LegacyTextRenderer()
+    return FragmentTextRenderer(profile.renderer_id)
+
+
+def render_for_profile(document, profile_id=None, options=None):
+    """Render a document through a registered profile, defaulting to legacy."""
+    return get_renderer(profile_id).render(document, options or {})
