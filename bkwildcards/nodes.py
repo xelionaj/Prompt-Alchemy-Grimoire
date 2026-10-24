@@ -315,7 +315,7 @@ class BKWildcardSelector:
         # workflows keep their positional meaning. ComfyUI supplies this new
         # dropdown's default when loading an older workflow.
         profiles = rendering.get_renderer_profiles().all()
-        required["renderer_profile"] = (
+        renderer_profile_input = (
             [profile.profile_id for profile in profiles],
             {
                 "default": "legacy-text",
@@ -325,6 +325,10 @@ class BKWildcardSelector:
 
         return {
             "required": required,
+            # Optional at the API schema level so older saved/API workflows
+            # that predate this selector continue to execute with the Python
+            # default. ComfyUI still exposes optional inputs as widgets.
+            "optional": {"renderer_profile": renderer_profile_input},
             "hidden": {
                 "extra_pnginfo": "EXTRA_PNGINFO",
                 "unique_id": "UNIQUE_ID",

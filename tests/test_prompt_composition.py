@@ -155,12 +155,12 @@ print(resolve_prompt(314159, ', ', 'Female', '_ghost.runner', {'common_art_style
         self.assertEqual(node.CATEGORY, contract["category"])
         self.assertEqual(list(node.RETURN_TYPES), contract["return_types"])
         self.assertEqual(list(node.RETURN_NAMES), contract["return_names"])
-        actual_keys = list(node.INPUT_TYPES()["required"].keys())
-        # Keep all saved workflow positions stable; the new selector is the
-        # sole appended widget, so old widgets_values continue to line up.
-        self.assertEqual(actual_keys[:-1], contract["required_input_keys"])
-        self.assertEqual(actual_keys[-1], "renderer_profile")
-        profile_widget = node.INPUT_TYPES()["required"]["renderer_profile"]
+        input_types = node.INPUT_TYPES()
+        # Preserve the old required widget ordering. Optional widgets still
+        # appear in the UI but old API prompts can omit this new field.
+        self.assertEqual(list(input_types["required"].keys()),
+                         contract["required_input_keys"])
+        profile_widget = input_types["optional"]["renderer_profile"]
         self.assertEqual(profile_widget[1]["default"], "legacy-text")
 
     def test_node_build_selects_profile_and_keeps_default_compatible(self):
