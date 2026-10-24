@@ -1,4 +1,4 @@
-# BKWILDCARDS
+# Prompt-Alchemy-Grimoire
 
 **A ComfyUI custom node that turns a bundled wildcard library into scoped dropdowns and emits a finished prompt string.**
 
@@ -21,42 +21,11 @@ Ships with **5,371 hand-written entries** across **56 categories** and **8 theme
 
 ## Install
 
-### Install via ComfyUI-Manager (recommended)
-
-The easiest way. BKWILDCARDS is published on the [Comfy Registry](https://registry.comfy.org/nodes/bkwildcards), so [ComfyUI-Manager](https://github.com/Comfy-Org/ComfyUI-Manager) can install it for you — no git, no manual file copying.
-
-1. Open **Manager → Custom Nodes Manager**.
-2. Search for **BKWILDCARDS**.
-3. Click **Install**.
-4. **Restart ComfyUI** when prompted.
-
-**There are no dependencies to install** — the node uses only the Python standard library.
+This fork is intended to be installed from its own repository checkout. Place the repository folder in `ComfyUI/custom_nodes/Prompt-Alchemy-Grimoire` and restart ComfyUI. There are no dependencies to install — the node uses only the Python standard library.
 
 ### Updating
 
-- **Via ComfyUI-Manager:** open **Manager → Custom Nodes Manager**, find **BKWILDCARDS**, and click **Update** (or use **Update All**). Restart ComfyUI to load the new version. Manager pulls the latest release from the Comfy Registry.
-- **Via git** (if you installed with `git clone`): run `git pull` inside the `BKWILDCARDS` folder, then restart ComfyUI.
-
-The node title shows the build number (e.g. `BKWILDCARDS Selector 0.9.20`), so you can confirm the update took.
-
-**Updating from an earlier version can require deleting the BKWILDCARDS Selector node and adding it again once.** Some versions add a control in the middle of the node — a Skin Tone control in 0.9.16, and a Bald toggle plus a second Art Style in 0.9.19 — which shifts the saved widget positions below it, so a node carried over from an older workflow can show wrong values until it's re-added. One-time step; your other nodes and wiring are unaffected.
-
-### Manual install (git)
-
-```bash
-cd ComfyUI/custom_nodes
-git clone https://github.com/bkidderz/BKWILDCARDS.git
-```
-
-Restart ComfyUI. **There are no dependencies to install** — the node uses only the Python standard library.
-
-### Manual install (ZIP)
-
-1. Download this repository as a ZIP (**Code → Download ZIP**).
-2. Extract it into `ComfyUI/custom_nodes/`.
-3. Make sure the folder is named `BKWILDCARDS` and contains `__init__.py` directly inside it.
-4. Restart ComfyUI.
-
+Update this checkout using the method you used to obtain your fork, then restart ComfyUI. If an older workflow carries an incompatible node layout, delete and re-add the selector node once.
 ### Where is `custom_nodes`?
 
 | Install type | Path |
@@ -68,7 +37,7 @@ Restart ComfyUI. **There are no dependencies to install** — the node uses only
 
 ## How to use
 
-Add **BKWILDCARDS Selector** to your workflow (right-click → Add Node → **BKWILDCARDS**).
+Add **Prompt-Alchemy-Grimoire Selector** to your workflow (right-click → Add Node → **Prompt-Alchemy-Grimoire**).
 
 > [!IMPORTANT]
 > **You must wire the node's `prompt` output into a prompt block.**
@@ -199,7 +168,7 @@ The output box updates **at queue time**, before generation starts, so you can s
 
 ## License
 
-BKWILDCARDS is licensed in two parts.
+Prompt-Alchemy-Grimoire includes two license boundaries.
 
 **Software** — everything except `wildcards/` — is [MIT](LICENSE). Use it, fork it, ship it, no strings.
 
@@ -207,4 +176,4 @@ BKWILDCARDS is licensed in two parts.
 
 **Images you generate are yours.** No attribution requested, ShareAlike not asserted against output. The ShareAlike term exists to keep the wildcard library itself open, not to reach into your renders.
 
-All wildcard content is original work by the repository owner and is also published on Civitai.
+This project is derived from BKWILDCARDS by bkidderz. The original software is MIT licensed; the inherited wildcard content in `wildcards/` is CC BY-SA 4.0. The original author also publishes wildcard content on Civitai.

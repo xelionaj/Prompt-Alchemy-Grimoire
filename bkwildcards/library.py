@@ -1,5 +1,5 @@
 """
-Wildcard library loader for BKWILDCARDS.
+Wildcard library loader for Prompt-Alchemy-Grimoire.
 
 Layout
 ------

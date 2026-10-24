@@ -108,10 +108,10 @@ def load_banks(path=BANKS_PATH):
         with open(path, "r", encoding="utf-8") as fh:
             data = json.load(fh)
     except (OSError, ValueError) as exc:
-        print("[BKWILDCARDS] body slider banks unavailable ({}): {}".format(path, exc))
+        print("[Prompt-Alchemy-Grimoire] body slider banks unavailable ({}): {}".format(path, exc))
         return None
     if not isinstance(data, dict) or not all(r in data for r in REGISTERS):
-        print("[BKWILDCARDS] body slider banks malformed: missing a register")
+        print("[Prompt-Alchemy-Grimoire] body slider banks malformed: missing a register")
         return None
     return data
 

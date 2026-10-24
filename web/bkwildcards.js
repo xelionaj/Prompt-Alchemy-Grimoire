@@ -1,5 +1,5 @@
 /**
- * BKWILDCARDS frontend extension.
+ * Prompt-Alchemy-Grimoire frontend extension.
  *
  * PURELY COSMETIC. It hides toggles belonging to a theme other than the one
  * selected and gives them readable labels. It never adds, removes, reorders or
@@ -20,7 +20,7 @@ import { api } from "../../scripts/api.js";
 
 const BUILD = "0.9.22";
 const NODE = "BKWildcardSelector";
-const NODE_TITLE = "BKWILDCARDS Selector";
+const NODE_TITLE = "Prompt-Alchemy-Grimoire Selector";
 const HIDDEN_TYPE = "bkwildcards-hidden";
 const RESOLVED_WIDGET = "resolved";
 const PROP_PROMPT = "bk_resolved";
@@ -125,7 +125,7 @@ function snapToPreset(node, layout) {
     }
     node.setDirtyCanvas?.(true, true);
   } catch (err) {
-    console.warn("[BKWILDCARDS] preset snap failed:", err);
+    console.warn("[Prompt-Alchemy-Grimoire] preset snap failed:", err);
   }
 }
 
@@ -145,7 +145,7 @@ function loadLayout() {
       return LAYOUT;
     })
     .catch((err) => {
-      console.warn("[BKWILDCARDS] layout unavailable, leaving node as-is:", err);
+      console.warn("[Prompt-Alchemy-Grimoire] layout unavailable, leaving node as-is:", err);
       return null;
     });
   return LAYOUT_PROMISE;
@@ -357,7 +357,7 @@ function installSliderReadouts(node, layout) {
       };
     }
   } catch (err) {
-    console.warn("[BKWILDCARDS] slider readouts failed:", err);
+    console.warn("[Prompt-Alchemy-Grimoire] slider readouts failed:", err);
   }
 }
 
@@ -378,7 +378,7 @@ function insertHeaders(node, layout) {
     node.widgets = out;
     node._bkHeadersDone = true;
   } catch (err) {
-    console.warn("[BKWILDCARDS] header insert failed:", err);
+    console.warn("[Prompt-Alchemy-Grimoire] header insert failed:", err);
   }
 }
 
@@ -413,7 +413,7 @@ function isStatusText(v) {
     typeof v !== "string" ||
     v === "" ||
     v === PENDING_TEXT ||
-    v.indexOf("[BKWILDCARDS build") === 0
+    v.indexOf("[Prompt-Alchemy-Grimoire build") === 0
   );
 }
 
@@ -434,7 +434,7 @@ function refreshConnectionState(node) {
     const w = node.widgets?.find((x) => x.name === RESOLVED_WIDGET);
     if (isStatusText(w?.value)) {
       const msg =
-        "[BKWILDCARDS build " +
+        "[Prompt-Alchemy-Grimoire build " +
         BUILD +
         "]" +
         (connected
@@ -554,7 +554,7 @@ function applyTheme(node, layout) {
 
     resize(node);
   } catch (err) {
-    console.warn("[BKWILDCARDS] scope apply failed, showing all widgets:", err);
+    console.warn("[Prompt-Alchemy-Grimoire] scope apply failed, showing all widgets:", err);
     showAll(node);
   }
 }
@@ -572,7 +572,7 @@ function relabel(node, layout) {
       }
     }
   } catch (err) {
-    console.warn("[BKWILDCARDS] relabel failed:", err);
+    console.warn("[Prompt-Alchemy-Grimoire] relabel failed:", err);
   }
 }
 
@@ -620,7 +620,7 @@ function setResolved(node, text, { persist = true } = {}) {
     }
     node.setDirtyCanvas(true, true);
   } catch (err) {
-    console.warn("[BKWILDCARDS] could not write resolved text:", err);
+    console.warn("[Prompt-Alchemy-Grimoire] could not write resolved text:", err);
   }
 }
 
@@ -675,10 +675,10 @@ function previewFromPrompt(promptData) {
         node._bkPreview = json.text; // cross-checked against execution below
         setResolved(node, json.text);
         applySliderState(node, json.sliders);
-        console.debug("[BKWILDCARDS] queue preview, node", id, "seed", seed,
+        console.debug("[Prompt-Alchemy-Grimoire] queue preview, node", id, "seed", seed,
                       "->", json.text.length, "chars");
       })
-      .catch((err) => console.warn("[BKWILDCARDS] populate failed:", err));
+      .catch((err) => console.warn("[Prompt-Alchemy-Grimoire] populate failed:", err));
   }
 }
 
@@ -703,7 +703,7 @@ function applySliderState(node, state) {
     }
     node.setDirtyCanvas?.(true, true);
   } catch (err) {
-    console.warn("[BKWILDCARDS] slider state mirror failed:", err);
+    console.warn("[Prompt-Alchemy-Grimoire] slider state mirror failed:", err);
   }
 }
 
@@ -761,7 +761,7 @@ function updateSkinToneOptions(node) {
     }
     node.setDirtyCanvas?.(true, true);
   } catch (err) {
-    console.warn("[BKWILDCARDS] skin-tone option update failed:", err);
+    console.warn("[Prompt-Alchemy-Grimoire] skin-tone option update failed:", err);
   }
 }
 
@@ -820,15 +820,15 @@ function applyNowAndNextFrame(node, layout) {
 // Loud on purpose. If this line is absent from the console, the browser is
 // serving a cached copy of this file and no amount of fixing here will show up.
 console.log(
-  "%c[BKWILDCARDS]%c extension loaded, build " + BUILD,
+  "%c[Prompt-Alchemy-Grimoire]%c extension loaded, build " + BUILD,
   "color:#7dd3fc;font-weight:bold", "color:inherit"
 );
 try {
-  window.BKWILDCARDS_BUILD = BUILD;
+  window.PROMPT_ALCHEMY_GRIMOIRE_BUILD = BUILD;
 } catch (_) {}
 
 app.registerExtension({
-  name: "bkwildcards.themeSelector",
+  name: "promptAlchemyGrimoire.themeSelector",
 
   async setup() {
     await loadLayout();
@@ -844,7 +844,7 @@ app.registerExtension({
       try {
         previewFromPrompt(data);
       } catch (err) {
-        console.warn("[BKWILDCARDS] queue preview hook failed:", err);
+        console.warn("[Prompt-Alchemy-Grimoire] queue preview hook failed:", err);
       }
       return origQueuePrompt.call(api, number, data);
     };
@@ -872,10 +872,10 @@ app.registerExtension({
 
         if (typeof node._bkPreview === "string") {
           if (node._bkPreview === text) {
-            console.debug("[BKWILDCARDS] preview matched execution ✓ (" +
+            console.debug("[Prompt-Alchemy-Grimoire] preview matched execution ✓ (" +
                           text.length + " chars)");
           } else {
-            console.warn("[BKWILDCARDS] PREVIEW ≠ EXECUTION — seed timing is wrong.\n" +
+            console.warn("[Prompt-Alchemy-Grimoire] PREVIEW ≠ EXECUTION — seed timing is wrong.\n" +
                          " preview : " + node._bkPreview.slice(0, 120) + "\n" +
                          " executed: " + text.slice(0, 120));
           }
@@ -884,7 +884,7 @@ app.registerExtension({
         node._bkPreviewedThisCycle = false;
         setResolved(node, text);
       } catch (err) {
-        console.warn("[BKWILDCARDS] executed listener failed:", err);
+        console.warn("[Prompt-Alchemy-Grimoire] executed listener failed:", err);
       }
     });
 
@@ -913,7 +913,7 @@ app.registerExtension({
         const text = message?.bk_resolved?.[0];
         if (typeof text === "string") setResolved(this, text);
       } catch (err) {
-        console.warn("[BKWILDCARDS] onExecuted handler failed:", err);
+        console.warn("[Prompt-Alchemy-Grimoire] onExecuted handler failed:", err);
       }
       return r;
     };

@@ -38,7 +38,7 @@ def _parse(path):
         with open(path, "r", encoding="utf-8") as fh:
             lines = fh.read().splitlines()
     except OSError as exc:
-        print("[BKWILDCARDS] skin tone bank unavailable ({}): {}".format(path, exc))
+        print("[Prompt-Alchemy-Grimoire] skin tone bank unavailable ({}): {}".format(path, exc))
         return None, {}
     groups, mt_group = {}, {}
     group = family = None

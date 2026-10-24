@@ -1,4 +1,4 @@
-"""BKWILDCARDS node definitions."""
+"""Prompt-Alchemy-Grimoire node definitions."""
 
 import json
 import random
@@ -53,7 +53,7 @@ def _stamp_workflow(extra_pnginfo, unique_id, prompt_text, extra_props=None):
                 props[key] = value
             break
     except Exception as exc:  # never let metadata stamping break a render
-        print("[BKWILDCARDS] could not stamp workflow metadata: {}".format(exc))
+        print("[Prompt-Alchemy-Grimoire] could not stamp workflow metadata: {}".format(exc))
 
 
 # Extra gender-dropdown options beyond the pack-derived genders (Female/Male),
@@ -835,7 +835,7 @@ class BKWildcardSelector:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("prompt",)
     FUNCTION = "build"
-    CATEGORY = "BKWILDCARDS"
+    CATEGORY = "Prompt-Alchemy-Grimoire"
     DESCRIPTION = (
         "Pick a gender and theme, then choose categories. Draws one line from each "
         "and returns them joined as a single prompt string. The resolved text is "
@@ -870,7 +870,7 @@ class BKWildcardSelector:
         # here on each queue while the on-node box stays frozen, the backend is
         # fine and the frontend script is stale.
         print(
-            "[BKWILDCARDS] node {} seed {} -> {} chars: {}".format(
+            "[Prompt-Alchemy-Grimoire] node {} seed {} -> {} chars: {}".format(
                 unique_id, seed, len(prompt_text), prompt_text[:70].replace("\n", " ")
             )
         )
@@ -886,5 +886,5 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "BKWildcardSelector": "BKWILDCARDS Selector",
+    "BKWildcardSelector": "Prompt-Alchemy-Grimoire Selector",
 }

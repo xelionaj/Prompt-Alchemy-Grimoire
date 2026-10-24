@@ -5,6 +5,6 @@ from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 try:
     from . import routes  # noqa: F401
 except Exception as exc:  # pragma: no cover
-    print("[BKWILDCARDS] layout endpoint unavailable: {}".format(exc))
+    print("[Prompt-Alchemy-Grimoire] layout endpoint unavailable: {}".format(exc))
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

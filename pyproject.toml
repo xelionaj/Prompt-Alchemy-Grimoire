@@ -1,6 +1,6 @@
 [project]
-name = "bkwildcards"
-description = "Scoped wildcard selector for ComfyUI. Pick a theme and categories from a bundled 5,200+ entry library with metatype-driven skin tone; get a finished prompt string. No wildcard syntax required."
+name = "prompt-alchemy-grimoire"
+description = "Prompt composition and wildcard selector node for ComfyUI."
 version = "0.9.22"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
@@ -13,14 +13,8 @@ classifiers = [
   "Topic :: Multimedia :: Graphics",
 ]
 
-[project.urls]
-Repository = "https://github.com/bkidderz/BKWILDCARDS"
-Documentation = "https://github.com/bkidderz/BKWILDCARDS#readme"
-"Bug Tracker" = "https://github.com/bkidderz/BKWILDCARDS/issues"
-
 [tool.comfy]
-PublisherId = "bkidderz"
-DisplayName = "BKWILDCARDS"
+DisplayName = "Prompt-Alchemy-Grimoire"
 # The bundled library and the frontend extension are the product — force-include
-# them so a registry package can never ship without content or the UI script.
+# them so a packaged install includes content and the UI script.
 includes = ["wildcards", "web"]
