@@ -297,17 +297,29 @@ class BKWildcardSelector:
             },
         )
 
-        # Display box, declared LAST so it renders below everything else.
+        # Display box, declared after the legacy controls so it renders below them.
         #
         # NOTE: widget order is positional in a saved workflow's widgets_values
         # array. Moving or inserting an input shifts every value after it.
-        # Treat this ordering as frozen once the repo is published.
+        # New widgets must be appended after this point to preserve saved values.
         required["resolved"] = (
             "STRING",
             {
                 "default": "",
                 "multiline": True,
                 "tooltip": "The prompt this node produced. Filled in automatically; edits are ignored.",
+            },
+        )
+
+        # Appended after every legacy widget so serialized values in existing
+        # workflows keep their positional meaning. ComfyUI supplies this new
+        # dropdown's default when loading an older workflow.
+        profiles = rendering.get_renderer_profiles().all()
+        required["renderer_profile"] = (
+            [profile.profile_id for profile in profiles],
+            {
+                "default": "legacy-text",
+                "tooltip": "Select a prompt renderer profile. Current profiles preserve the selected text and formatting; model-specific transformations are added only when verified.",
             },
         )
 
@@ -338,6 +350,7 @@ class BKWildcardSelector:
         theme=None,
         label_output=LABEL_LABELED,
         mayhem=False,
+        renderer_profile="legacy-text",
         extra_pnginfo=None,
         unique_id=None,
         **choices
@@ -345,11 +358,9 @@ class BKWildcardSelector:
         request = CompositionRequest(
             seed=int(seed), separator=separator, gender=gender, theme=theme,
             choices=choices, label_mode=_label_mode(label_output), mayhem=bool(mayhem),
+            renderer_id=renderer_profile,
         )
         document = _PROMPT_COMPOSER.compose(request, _CATALOG)
-        # The legacy node does not yet expose a model-profile widget. Keep its
-        # output stable while allowing internal callers to select a registered
-        # profile through CompositionRequest in the next integration step.
         renderer = rendering.get_renderer(request.renderer_id)
         prompt_text = renderer.render(document, request.renderer_options)
         # The slider lane's effective values (rolled under — random —) ride

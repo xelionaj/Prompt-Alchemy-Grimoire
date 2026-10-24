@@ -18,7 +18,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
-const BUILD = "0.9.22";
+const BUILD = "0.9.23";
 const NODE = "BKWildcardSelector";
 const NODE_TITLE = "Prompt-Alchemy-Grimoire Selector";
 const HIDDEN_TYPE = "bkwildcards-hidden";
@@ -42,6 +42,7 @@ const SPECIAL_GROUPS = {
   control_after_generate: "Settings",
   label_output: "Settings",
   mayhem: "Settings",
+  renderer_profile: "Settings",
   // Experimental Slider Build Control: fixed INT/BOOLEAN inputs that sit with
   // the Build presets (Python emits them right after the Build categories).
   body_mass: "Physical - Body",
@@ -60,6 +61,7 @@ const SPECIAL_GROUPS = {
 const FIXED_LABELS = {
   theme: "Theme",
   gender: "Gender",
+  renderer_profile: "Renderer Profile",
   body_mass: "Mass",
   body_bust: "Bust",
   body_waist: "Waist",
@@ -664,8 +666,8 @@ function previewFromPrompt(promptData) {
         separator: typeof inputs.separator === "string" ? inputs.separator : ", ",
         gender: inputs.gender ?? null,
         theme: inputs.theme ?? null,
-        // resolve_prompt only reads the category keys out of this; extra keys
-        // (seed, separator, resolved, ...) are ignored.
+        // The preview endpoint consumes category keys and renderer_profile;
+        // other widget keys are ignored by composition.
         choices: inputs,
       }),
     })

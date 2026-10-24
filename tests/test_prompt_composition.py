@@ -155,10 +155,32 @@ print(resolve_prompt(314159, ', ', 'Female', '_ghost.runner', {'common_art_style
         self.assertEqual(node.CATEGORY, contract["category"])
         self.assertEqual(list(node.RETURN_TYPES), contract["return_types"])
         self.assertEqual(list(node.RETURN_NAMES), contract["return_names"])
-        self.assertEqual(
-            list(node.INPUT_TYPES()["required"].keys()),
-            contract["required_input_keys"],
+        actual_keys = list(node.INPUT_TYPES()["required"].keys())
+        # Keep all saved workflow positions stable; the new selector is the
+        # sole appended widget, so old widgets_values continue to line up.
+        self.assertEqual(actual_keys[:-1], contract["required_input_keys"])
+        self.assertEqual(actual_keys[-1], "renderer_profile")
+        profile_widget = node.INPUT_TYPES()["required"]["renderer_profile"]
+        self.assertEqual(profile_widget[1]["default"], "legacy-text")
+
+    def test_node_build_selects_profile_and_keeps_default_compatible(self):
+        scenario = BASELINE["scenarios"][0]
+        node = nodes.BKWildcardSelector()
+        kwargs = dict(scenario["choices"])
+        common = dict(
+            seed=scenario["seed"], separator=", ", gender=scenario["gender"],
+            theme=scenario["theme"], label_output=scenario["label_mode"],
+            mayhem=scenario["mayhem"], **kwargs,
         )
+        default = node.build(**common)["result"][0]
+        selected = node.build(**common, renderer_profile="krea-2")["result"][0]
+        expected = nodes.resolve_prompt(
+            scenario["seed"], ", ", scenario["gender"], scenario["theme"],
+            scenario["choices"], label_mode=scenario["label_mode"],
+            mayhem=scenario["mayhem"],
+        )
+        self.assertEqual(default, expected)
+        self.assertEqual(selected, expected)
 
 
 if __name__ == "__main__":

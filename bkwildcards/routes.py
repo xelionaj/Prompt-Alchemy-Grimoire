@@ -26,6 +26,16 @@ def _payload():
         "themes": list(snapshot.theme_labels),
         "theme_to_pack": snapshot.legacy_theme_to_pack,
         "genders": list(snapshot.genders),
+        "renderer_profiles": [
+            {
+                "id": profile.profile_id,
+                "label": profile.label,
+                "model_family": profile.model_family,
+                "variants": list(profile.variants),
+                "prompt_style": profile.prompt_style,
+            }
+            for profile in nodes.rendering.get_renderer_profiles().all()
+        ],
         "sources": [source.as_dict() for source in snapshot.sources],
         "gender_off": nodes.GENDER_OFF,
         "gender_random": nodes.GENDER_RANDOM,
@@ -95,6 +105,7 @@ if PromptServer is not None and web is not None:
                 choices,
                 label_mode=nodes._label_mode(choices.get("label_output")),
                 mayhem=bool(choices.get("mayhem", False)),
+                renderer_id=choices.get("renderer_profile", "legacy-text"),
             )
         except Exception as exc:
             return web.json_response({"error": str(exc)}, status=400)
