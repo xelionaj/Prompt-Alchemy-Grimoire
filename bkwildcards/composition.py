@@ -3,15 +3,14 @@
 import re
 
 from . import catalog, library, selection, sliders, skintones
-from .contracts import CompositionRequest, PromptDocument, PromptFragment
+from .contracts import CompositionRequest, PromptDocument, PromptFragment, SelectedEntry
 from .rendering import (
     LABEL_LABELED, LABEL_JSON, LABEL_PLAIN, LegacyTextRenderer, _format_picks,
     _label_mode,
 )
 
 _CATALOG = catalog.get_default_catalog().load()
-_CATEGORIES = list(_CATALOG.legacy_categories)
-_THEME_TO_PACK = _CATALOG.legacy_theme_to_pack
+_CATEGORY_RECORDS = list(_CATALOG.categories)
 _GENDERS = list(_CATALOG.genders)
 _SELECTION = selection.get_default_selection_service()
 
@@ -38,31 +37,85 @@ ART_STYLE_KEY = "common_art_style"
 ART_STYLE_KEY_2 = "common_art_style_2"
 _ART_STYLE_KEYS = (ART_STYLE_KEY, ART_STYLE_KEY_2)
 
-# Metatype-driven skin tone: the active metatype section chooses the skin-group
-# the coloration is rolled from (see skintones). Map each metatype line back to
-# its section once at import so a drawn/rolled metatype resolves to its group.
-_METATYPE_CAT = next((c for c in _CATEGORIES if c["id"] == "metatype"), None)
-_METATYPE_KEY = _METATYPE_CAT["key"] if _METATYPE_CAT else "common_metatype"
-_METATYPE_LINE_SECTION = {}
-if _METATYPE_CAT:
-    for _sec, _rows in library.read_sections(_METATYPE_CAT["path"]):
-        for _ln in _rows:
-            _METATYPE_LINE_SECTION.setdefault(_ln, _sec)
+# The selected metatype entry carries its section for skin-tone coherence.
+_METATYPE_CAT = next((c for c in _CATEGORY_RECORDS if c.id == "metatype"), None)
+_METATYPE_KEY = _METATYPE_CAT.input_key if _METATYPE_CAT else "common_metatype"
+
+
+def _cat_value(category, normalized_name, legacy_name=None, default=None):
+    if isinstance(category, dict):
+        value = category.get(normalized_name)
+        if value is None and legacy_name:
+            value = category.get(legacy_name)
+    else:
+        value = getattr(category, normalized_name, None)
+        if value is None and legacy_name:
+            value = getattr(category, legacy_name, None)
+    return default if value is None else value
+
+
+def _category_key(category):
+    return _cat_value(category, "input_key", "key")
+
+
+def _category_id(category):
+    return _cat_value(category, "id", default="")
+
+
+def _category_order(category):
+    return _cat_value(category, "composition_order", "order", 500)
+
+
+def _category_label(category):
+    return _cat_value(category, "prompt_label") or _cat_value(
+        category, "ui_label", "label", ""
+    )
+
+
+def _category_theme(category):
+    return _cat_value(category, "theme_id", default=None)
+
+
+def _category_gender(category):
+    return _cat_value(category, "gender", default=None)
+
+
+def _find_category(categories, key):
+    return next((cat for cat in categories if _category_key(cat) == key), None)
+
+
+class ThemeGenderScopePolicy:
+    """Authoritative theme and gender filtering for catalog categories."""
+
+    @staticmethod
+    def active_theme_id(catalog_snapshot, theme_label):
+        active = None
+        for theme in catalog_snapshot.themes:
+            if theme.label == theme_label:
+                active = theme.id
+        return active
+
+    @staticmethod
+    def allows(category, active_theme_id, active_gender):
+        global_scope = _cat_value(category, "scope_kind") == "global"
+        if not global_scope and _category_theme(category) != active_theme_id:
+            return False
+        gender = _category_gender(category)
+        if gender and active_gender != GENDER_FLUID and gender != active_gender:
+            return False
+        return True
 
 
 def _in_scope(cat, active_pack, active_gender):
-    """Theme and gender gate. Enforced here, not in the browser.
-
-    active_gender is already resolved to a concrete gender or GENDER_FLUID by
-    the time this runs (resolve_prompt rolls GENDER_RANDOM -> a real gender).
-    Under Fluid the gender axis is dropped entirely, so both genders'
-    gender-scoped categories pass.
-    """
-    if not (cat["is_global"] or cat["pack"] == active_pack):
-        return False
-    if cat["gender"] and active_gender != GENDER_FLUID and cat["gender"] != active_gender:
-        return False
-    return True
+    """Legacy compatibility wrapper around the explicit scope policy."""
+    if isinstance(cat, dict):
+        normalized = {
+            "scope_kind": "global" if cat.get("is_global") else "theme",
+            "theme_id": None if cat.get("is_global") else cat.get("pack"),
+            "gender": cat.get("gender"),
+        }
+        return ThemeGenderScopePolicy.allows(normalized, active_pack, active_gender)
+    return ThemeGenderScopePolicy.allows(cat, active_pack, active_gender)
 
 
 # The Bald toggle (a top-level Hair on/off, key _BALD_KEY) suppresses the Hair
@@ -168,11 +221,6 @@ _SLIDER_REGISTER = {
     GENDER_OFF: "androgynous",
 }
 _SLIDER_DEFAULT_REGISTER = "androgynous"
-# The Build preset picks the slider build replaces, and the slot it takes over.
-_BUILD_KEYS = {c["key"] for c in _CATEGORIES if c["id"] == "build"}
-_BUILD_CAT = next((c for c in _CATEGORIES if c["id"] == "build"), None)
-_BUILD_ORDER = _BUILD_CAT["order"] if _BUILD_CAT else 15
-_BUILD_LABEL = (_BUILD_CAT.get("prompt_label") or _BUILD_CAT["label"]) if _BUILD_CAT else "build"
 _SLIDER_KEY = "__body_sliders__"
 
 
@@ -180,31 +228,38 @@ def _slider_register(gender):
     return _SLIDER_REGISTER.get(gender, _SLIDER_DEFAULT_REGISTER)
 
 
-def _resolve_gender(seed, gender):
+def _resolve_gender(seed, gender, genders=None, selection_service=None):
     """Random -> a concrete gender rolled per seed on its own rng stream (so
     the per-category draws are unchanged). Deterministic, so preview still
     matches execution. Everything else passes through."""
-    if gender == GENDER_RANDOM and _GENDERS:
-        return _SELECTION.rng_for_legacy_key(seed, "__gender_roll__").choice(_GENDERS)
+    genders = _GENDERS if genders is None else list(genders)
+    if gender == GENDER_RANDOM and genders:
+        service = selection_service or _SELECTION
+        return service.rng_for_legacy_key(seed, "__gender_roll__").choice(genders)
     return gender
 
 
-def _preset_pick(seed, gender, choices):
+def _preset_pick(seed, gender, choices, categories=None, selection_service=None,
+                 genders=None):
     """(register, section) of the Build preset that will emit this run, or
     None. Mirrors the category loop's draw for the build categories so the
     section of a `— random —` preset is known at preview time."""
-    gender = _resolve_gender(seed, gender)
-    active = [c for c in _CATEGORIES if c["id"] == "build" and _in_scope(c, None, gender)]
+    gender = _resolve_gender(seed, gender, genders, selection_service)
+    categories = _CATEGORY_RECORDS if categories is None else categories
+    selection_service = selection_service or _SELECTION
+    active = [c for c in categories if _category_id(c) == "build"
+              and ThemeGenderScopePolicy.allows(c, None, gender)]
     for cat in active:
-        pick = _SELECTION.draw_legacy(cat, choices.get(cat["key"]), seed)
-        if not pick:
+        key = _category_key(cat)
+        selected = selection_service.select_legacy(cat, choices.get(key), seed)
+        if not selected:
             continue
-        section = next((name for name, rows in library.read_sections(cat["path"]) if pick in rows), None)
-        return _SLIDER_REGISTER.get(cat["gender"], _SLIDER_DEFAULT_REGISTER), section
+        return _SLIDER_REGISTER.get(_category_gender(cat), _SLIDER_DEFAULT_REGISTER), selected.section
     return None
 
 
-def slider_state(seed, gender, choices):
+def slider_state(seed, gender, choices, categories=None, selection_service=None,
+                 genders=None):
     """What the slider lane will do for this run, or None when it is off.
 
     {"mode", "values": {axis: 0-10} | None, "register", "section"?} — under
@@ -221,9 +276,13 @@ def slider_state(seed, gender, choices):
     mode = sliders.mode_of(choices.get(sliders.TOGGLE_INPUT))
     if mode == sliders.MODE_OFF or sliders.BANKS is None or gender == GENDER_OFF:
         return None
-    register = _slider_register(_resolve_gender(seed, gender))
+    register = _slider_register(
+        _resolve_gender(seed, gender, genders, selection_service)
+    )
     if mode == sliders.MODE_PRESET:
-        pick = _preset_pick(seed, gender, choices)
+        pick = _preset_pick(
+            seed, gender, choices, categories, selection_service, genders
+        )
         if pick is None:
             return {"mode": mode, "values": None, "register": register, "section": None}
         reg, section = pick
@@ -237,7 +296,19 @@ def slider_state(seed, gender, choices):
     return {"mode": mode, "values": values, "register": register}
 
 
-def _apply_body_sliders(raw, seed, gender, choices):
+def _build_keys(categories):
+    return {_category_key(cat) for cat in categories if _category_id(cat) == "build"}
+
+
+def _build_metadata(categories):
+    build = next((cat for cat in categories if _category_id(cat) == "build"), None)
+    if build is None:
+        return 15, "build"
+    return _category_order(build), _category_label(build) or "build"
+
+
+def _apply_body_sliders(raw, seed, gender, choices, categories=None,
+                        selection_service=None, genders=None):
     """raw is a list of (order, label, text, key). The Body Sliders lane governs
     the build slot:
       off      -> no build at all. The Build preset speaks ONLY in preset mode
@@ -251,19 +322,25 @@ def _apply_body_sliders(raw, seed, gender, choices):
     if sliders.BANKS is None:
         return raw  # fail-soft: slider banks unavailable, leave the presets alone
     mode = sliders.mode_of((choices or {}).get(sliders.TOGGLE_INPUT))
+    categories = _CATEGORY_RECORDS if categories is None else categories
+    build_keys = _build_keys(categories)
     if mode == sliders.MODE_OFF:
-        return [r for r in raw if r[3] not in _BUILD_KEYS]
-    state = slider_state(seed, gender, choices)
+        return [r for r in raw if r[3] not in build_keys]
+    state = slider_state(
+        seed, gender, choices, categories, selection_service, genders
+    )
     if state is None or state["mode"] == sliders.MODE_PRESET:
         return raw  # Gender off (no body), or the preset's turn to speak
     text = sliders.synthesize(state["register"], state["values"])
-    raw = [r for r in raw if r[3] not in _BUILD_KEYS]
+    raw = [r for r in raw if r[3] not in build_keys]
     if text:
-        raw.append((_BUILD_ORDER, _BUILD_LABEL, text, _SLIDER_KEY))
+        build_order, build_label = _build_metadata(categories)
+        raw.append((build_order, build_label, text, _SLIDER_KEY))
     return raw
 
 
-def _apply_skin_tone(raw, seed, choices, force_random=False):
+def _apply_skin_tone(raw, seed, choices, force_random=False, selected_entries=None,
+                     metatype_key=_METATYPE_KEY):
     """raw is a list of (order, label, text, key). Append a coloration pick
     rolled from the ACTIVE metatype's skin group (skintones). The metatype line
     already emitted is mapped back to its section to pick the group.
@@ -275,9 +352,11 @@ def _apply_skin_tone(raw, seed, choices, force_random=False):
     choice = skintones.TONE_RANDOM if force_random else choices.get(skintones.INPUT)
     if not choice or choice == skintones.TONE_OFF:
         return raw
-    mt_index = next((i for i, (_o, _l, _t, k) in enumerate(raw) if k == _METATYPE_KEY), None)
+    mt_index = next((i for i, (_o, _l, _t, k) in enumerate(raw) if k == metatype_key), None)
     pick = raw[mt_index][2] if mt_index is not None else None
-    section = _METATYPE_LINE_SECTION.get(pick) if pick else None
+    selected_entries = selected_entries or {}
+    selected = selected_entries.get(metatype_key) if pick else None
+    section = selected.section if selected else None
     tone = skintones.roll(seed, section, choice)
     if tone:
         entry = (skintones.ORDER, skintones.PROMPT_LABEL, tone, skintones.KEY)
@@ -289,6 +368,71 @@ def _apply_skin_tone(raw, seed, choices, force_random=False):
         else:
             raw.append(entry)
     return raw
+
+
+class BodySliderPolicy:
+    @staticmethod
+    def apply(raw, seed, gender, choices, categories, selection_service,
+              genders=None):
+        return _apply_body_sliders(
+            raw, seed, gender, choices, categories, selection_service, genders
+        )
+
+
+class SkinTonePolicy:
+    @staticmethod
+    def apply(raw, seed, choices, selected_entries, force_random=False,
+              metatype_key=_METATYPE_KEY):
+        return _apply_skin_tone(
+            raw, seed, choices, force_random, selected_entries, metatype_key
+        )
+
+
+class CyberneticColorPolicy:
+    @staticmethod
+    def apply(raw):
+        return _apply_cyber_color(raw)
+
+
+class ArtStyleDeduplicationPolicy:
+    @staticmethod
+    def apply(raw):
+        return _dedupe_second_art_style(raw)
+
+
+class BaldSuppressionPolicy:
+    @staticmethod
+    def apply(raw):
+        return _drop_if_bald(raw, preserve_keys=True)
+
+
+class LegacySpecialBehaviorPolicy:
+    """Apply legacy cross-category rules in their established order."""
+
+    @staticmethod
+    def standard(raw, seed, gender, choices, categories, selected_entries,
+                 selection_service, genders=None):
+        raw = BodySliderPolicy.apply(
+            raw, seed, gender, choices, categories, selection_service, genders
+        )
+        raw = SkinTonePolicy.apply(raw, seed, choices, selected_entries)
+        return BaldSuppressionPolicy.apply(
+            ArtStyleDeduplicationPolicy.apply(CyberneticColorPolicy.apply(raw))
+        )
+
+    @staticmethod
+    def mayhem_skin_tone(raw, seed, choices, selected_entries,
+                         metatype_key=_METATYPE_KEY):
+        return SkinTonePolicy.apply(
+            raw, seed, choices, selected_entries, force_random=True,
+            metatype_key=metatype_key,
+        )
+
+    @staticmethod
+    def mayhem_output(raw):
+        return BaldSuppressionPolicy.apply(
+            ArtStyleDeduplicationPolicy.apply(CyberneticColorPolicy.apply(raw))
+        )
 
 
 # --- Mayhem mode -----------------------------------------------------------
@@ -317,7 +461,8 @@ _MAYHEM_EXTRA_PROB = 0.5
 _MAYHEM_BALD_PROB = 0.05
 
 
-def _mayhem_compose(seed, choices=None):
+def _compose_mayhem(seed, choices=None, catalog_snapshot=None,
+                    selection_service=None):
     """Seeded cross-theme random composition, ignoring every input EXCEPT the
     Art Style selection. Returns (raw picks, slider-lane state).
 
@@ -333,74 +478,98 @@ def _mayhem_compose(seed, choices=None):
     nothing; a specific style stays put; — random — still rolls per seed.
     """
     choices = choices or {}
-    rng = _SELECTION.rng_for_seed(seed)
-    gender = rng.choice([None] + list(_GENDERS))
+    catalog_snapshot = catalog_snapshot or _CATALOG
+    categories = catalog_snapshot.categories
+    genders = list(catalog_snapshot.genders)
+    selection_service = selection_service or _SELECTION
+    rng = selection_service.rng_for_seed(seed)
+    gender = rng.choice([None] + genders)
     # A user-SELECTED specific metatype is honoured (kept), like Art Style, so its
     # skin stays within that metatype's group; — off — / — random — let mayhem roll it.
-    mt_choice = choices.get(_METATYPE_KEY)
+    metatype_cat = next((cat for cat in categories if _category_id(cat) == "metatype"), None)
+    metatype_key = _category_key(metatype_cat) if metatype_cat else _METATYPE_KEY
+    mt_choice = choices.get(metatype_key)
     honour_metatype = mt_choice not in (None, library.SECTION_OFF, library.SECTION_ANY)
     slots = {}
-    for cat in _CATEGORIES:
-        if cat["gender"] and cat["gender"] != gender:
+    for cat in categories:
+        if _category_gender(cat) and _category_gender(cat) != gender:
             continue
-        slot = _MAYHEM_SLOT.get(cat["id"])
+        slot = _MAYHEM_SLOT.get(_category_id(cat))
         if slot == "metatype" and honour_metatype:
             continue  # honoured below, not randomised
         if slot:
             slots.setdefault(slot, []).append(cat)
     raw = []  # (order, label, text, key)
+    selected_entries = {}
     # Both Art Style dropdowns are honoured from the user's selection, not
     # randomised by mayhem — each on its own rng stream so the look stays put
     # while everything else goes wild. Off contributes nothing; a specific style
     # stays; — random — rolls per seed. _dedupe_second_art_style (in
     # _resolve_mayhem) drops the second if it lands on the first's style.
     for akey in _ART_STYLE_KEYS:
-        art_cat = next((c for c in _CATEGORIES if c["key"] == akey), None)
+        art_cat = _find_category(categories, akey)
         if not art_cat:
             continue
-        pick = _SELECTION.draw_legacy(
-            art_cat, choices.get(art_cat["key"]), seed
+        selected = selection_service.select_legacy(
+            art_cat, choices.get(_category_key(art_cat)), seed
         )
-        if pick:
-            raw.append((art_cat["order"],
-                        art_cat.get("prompt_label") or art_cat["label"],
-                        pick, art_cat["key"]))
+        if selected:
+            key = _category_key(art_cat)
+            selected_entries[key] = selected
+            raw.append((_category_order(art_cat), _category_label(art_cat),
+                        selected.text, key))
     gtext = _GENDER_TEXT.get(gender)
     if gtext:
         raw.append((_GENDER_ORDER, "gender", gtext, None))
     # Honoured metatype: drawn on its own rng stream (like Art Style) so it does
     # not disturb the other mayhem rolls; the skin injection below then keeps the
     # coloration inside this metatype's group.
-    if honour_metatype and _METATYPE_CAT:
-        mt_pick = _SELECTION.draw_legacy(_METATYPE_CAT, mt_choice, seed)
-        if mt_pick:
-            raw.append((_METATYPE_CAT["order"],
-                        _METATYPE_CAT.get("prompt_label") or _METATYPE_CAT["label"],
-                        mt_pick, _METATYPE_CAT["key"]))
+    if honour_metatype and metatype_cat:
+        selected = selection_service.select_legacy(metatype_cat, mt_choice, seed)
+        if selected:
+            key = _category_key(metatype_cat)
+            selected_entries[key] = selected
+            raw.append((_category_order(metatype_cat), _category_label(metatype_cat),
+                        selected.text, key))
     for slot, cats in slots.items():
         if slot not in _MAYHEM_CORE and rng.random() >= _MAYHEM_EXTRA_PROB:
             continue
         cat = rng.choice(cats)
-        pool = library.read_lines(cat["path"])
-        if not pool:
-            continue
-        raw.append((cat["order"], cat.get("prompt_label") or cat["label"],
-                    rng.choice(pool), cat["key"]))
+        selected = selection_service.select_random(cat, rng)
+        if selected:
+            key = _category_key(cat)
+            selected_entries[key] = selected
+            raw.append((_category_order(cat), _category_label(cat), selected.text, key))
     # Bald: an independent low-probability roll on its own rng stream, so it does
     # not disturb the other mayhem rolls (the queue preview stays == execution).
     # When it hits, the shared _drop_if_bald (in _resolve_mayhem) removes the
     # rolled hair type/style/colour, so Mayhem never renders a half-bald head.
-    bald_cat = next((c for c in _CATEGORIES if c["key"] == _BALD_KEY), None)
+    bald_cat = _find_category(categories, _BALD_KEY)
     if bald_cat:
-        bald_rng = _SELECTION.rng_for_legacy_key(seed, _BALD_KEY)
+        bald_rng = selection_service.rng_for_legacy_key(seed, _BALD_KEY)
         if bald_rng.random() < _MAYHEM_BALD_PROB:
-            pool = library.read_lines(bald_cat["path"])
-            if pool:
-                raw.append((bald_cat["order"],
-                            bald_cat.get("prompt_label") or bald_cat["label"],
-                            bald_rng.choice(pool), _BALD_KEY))
-    raw = _apply_skin_tone(raw, seed, choices, force_random=True)
-    return _mayhem_slider_lane(seed, gender, raw)
+            selected = selection_service.select_random(bald_cat, bald_rng)
+            if selected:
+                selected_entries[_BALD_KEY] = selected
+                raw.append((_category_order(bald_cat), _category_label(bald_cat),
+                            selected.text, _BALD_KEY))
+    raw = SkinTonePolicy.apply(
+        raw, seed, choices, selected_entries, force_random=True,
+        metatype_key=metatype_key,
+    )
+    raw, state = _mayhem_slider_lane(
+        seed, gender, raw, categories, selected_entries, selection_service
+    )
+    return LegacySpecialBehaviorPolicy.mayhem_output(raw), state, selected_entries
+
+
+class MayhemCompositionPolicy:
+    """Legacy cross-theme slot composition with preserved seeded rules."""
+
+    @staticmethod
+    def compose(seed, choices=None, catalog_snapshot=None,
+                selection_service=None):
+        return _compose_mayhem(seed, choices, catalog_snapshot, selection_service)
 
 
 # Mayhem's build slot: a preset line (as always) or a rolled slider body, on a
@@ -409,102 +578,123 @@ def _mayhem_compose(seed, choices=None):
 _MAYHEM_SLIDER_PROB = 0.5
 
 
-def _mayhem_slider_lane(seed, gender, raw):
+def _mayhem_slider_lane(seed, gender, raw, categories=None,
+                        selected_entries=None, selection_service=None):
     """raw is a list of (order, label, text, key). With a preset build in the
     composition, flip the coin: heads -> replace it with a slider body rolled
     from the seed in the rolled gender's register; tails -> keep the preset and
     report its section's vector. Returns (raw, state) where state is what the
     sliders mirror ({"mode": "mayhem", "values", "register", "section"?}) or
     None when Mayhem rolled no gender (no body, as with Gender off)."""
-    build = next((r for r in raw if r[3] in _BUILD_KEYS), None)
+    categories = _CATEGORY_RECORDS if categories is None else categories
+    selected_entries = selected_entries or {}
+    selection_service = selection_service or _SELECTION
+    build_keys = _build_keys(categories)
+    build = next((r for r in raw if r[3] in build_keys), None)
     if gender is None or build is None or sliders.BANKS is None:
         return raw, None
-    rng = _SELECTION.rng_for_legacy_key(seed, "__mayhem_sliders__")
+    rng = selection_service.rng_for_legacy_key(seed, "__mayhem_sliders__")
     register = _SLIDER_REGISTER.get(gender, _SLIDER_DEFAULT_REGISTER)
     if rng.random() < _MAYHEM_SLIDER_PROB:
         values = {axis: rng.randint(sliders.SLIDER_MIN, sliders.SLIDER_MAX)
                   for axis in sliders.AXES}
         text = sliders.synthesize(register, values)
         if text:
-            raw = [r for r in raw if r[3] not in _BUILD_KEYS]
-            raw.append((_BUILD_ORDER, _BUILD_LABEL, text, _SLIDER_KEY))
+            raw = [r for r in raw if r[3] not in build_keys]
+            build_order, build_label = _build_metadata(categories)
+            raw.append((build_order, build_label, text, _SLIDER_KEY))
             return raw, {"mode": sliders.MODE_MAYHEM, "values": values, "register": register}
-    cat = next((c for c in _CATEGORIES if c["key"] == build[3]), None)
-    section = None
-    if cat:
-        section = next((name for name, rows in library.read_sections(cat["path"])
-                        if build[2] in rows), None)
+    selected = selected_entries.get(build[3])
+    section = selected.section if selected else None
     return raw, {"mode": sliders.MODE_MAYHEM, "values": sliders.preset_vector(register, section),
                  "register": register, "section": section}
 
 
 def _resolve_mayhem(seed, choices=None):
-    raw, _state = _mayhem_compose(seed, choices)
-    return _drop_if_bald(
-        _dedupe_second_art_style(_apply_cyber_color(raw)), preserve_keys=True
-    )
+    raw, _state, _selected = MayhemCompositionPolicy.compose(seed, choices)
+    return raw
 
 
 def mayhem_slider_state(seed, choices=None):
     """The slider-lane state of a Mayhem run (for the populate endpoint and the
     PNG stamp), from the same seeded composition build() emits."""
-    return _mayhem_compose(seed, choices)[1]
+    return MayhemCompositionPolicy.compose(seed, choices)[1]
 
 
-def _compose_picks(seed, gender=None, theme=None, choices=None, mayhem=False):
-    """Resolve ordered legacy picks before any renderer formats their text."""
-    if mayhem:
-        return _resolve_mayhem(seed, choices)
+def _compose_picks(seed, gender=None, theme=None, choices=None, mayhem=False,
+                   catalog_snapshot=None, selection_service=None):
+    """Compose catalog records and selected entries into ordered legacy picks."""
+    catalog_snapshot = catalog_snapshot or _CATALOG
+    selection_service = selection_service or _SELECTION
     choices = choices or {}
-    gender = _resolve_gender(seed, gender)
-    active_pack = _THEME_TO_PACK.get(theme)
+    categories = catalog_snapshot.categories
+    if mayhem:
+        raw, state, selected = MayhemCompositionPolicy.compose(
+            seed, choices, catalog_snapshot, selection_service
+        )
+        return raw, selected, state, None
+
+    gender = _resolve_gender(
+        seed, gender, catalog_snapshot.genders, selection_service
+    )
+    active_theme_id = ThemeGenderScopePolicy.active_theme_id(catalog_snapshot, theme)
     raw = []
+    selected_entries = {}
     gtext = _GENDER_TEXT.get(gender) or (
         _GENDER_FLUID_TEXT if gender == GENDER_FLUID else None
     )
     if gtext:
         raw.append((_GENDER_ORDER, "gender", gtext, None))
-    for cat in _CATEGORIES:
-        if not _in_scope(cat, active_pack, gender):
+    for cat in categories:
+        if not ThemeGenderScopePolicy.allows(cat, active_theme_id, gender):
             continue
-        pick = _SELECTION.draw_legacy(cat, choices.get(cat["key"]), seed)
-        if pick:
-            raw.append((cat["order"], cat.get("prompt_label") or cat["label"],
-                        pick, cat["key"]))
-    raw = _apply_body_sliders(raw, seed, gender, choices)
-    raw = _apply_skin_tone(raw, seed, choices)
-    return _drop_if_bald(
-        _dedupe_second_art_style(_apply_cyber_color(raw)), preserve_keys=True
+        key = _category_key(cat)
+        selected = selection_service.select_legacy(cat, choices.get(key), seed)
+        if selected:
+            selected_entries[key] = selected
+            raw.append((_category_order(cat), _category_label(cat), selected.text, key))
+    result = LegacySpecialBehaviorPolicy.standard(
+        raw, seed, gender, choices, categories, selected_entries,
+        selection_service, catalog_snapshot.genders,
     )
+    return result, selected_entries, None, gender
 
 
 class LegacyPromptComposer:
     """Compose legacy wildcard picks into renderer-neutral fragments.
 
-    This adapter preserves the existing seeded draws and special rules. It is
-    bound to the legacy filesystem catalog; future catalog providers can supply
-    their own PromptComposer implementation.
+    This adapter consumes normalized catalog records and selection results.
+    The selection service owns legacy file access; policies own scope and
+    cross-category behavior. The supplied catalog is not replaced by a module
+    global, so other line-based catalog sources can use this composer.
     """
 
+    def __init__(self, selection_service=None):
+        self.selection_service = selection_service or _SELECTION
+
     def compose(self, request, catalog_snapshot):
-        if catalog_snapshot != _CATALOG:
-            raise ValueError("LegacyPromptComposer requires the legacy filesystem catalog")
-        picks = _compose_picks(
+        picks, selected_entries, slider_state_value, gender = _compose_picks(
             request.seed, request.gender, request.theme,
-            request.choices, request.mayhem,
+            request.choices, request.mayhem, catalog_snapshot,
+            self.selection_service,
         )
         by_key = {category.input_key: category for category in catalog_snapshot.categories}
         fragments = []
         for order, label, text, key in picks:
             category = by_key.get(key) if key else None
+            selected = selected_entries.get(key) if key else None
+            provenance = (category.provenance.as_dict()
+                          if category and category.provenance else None)
             fragments.append(PromptFragment(
                 text=text,
                 role=(category.semantic_role if category and category.semantic_role else label),
                 label=label,
                 order=order,
                 input_key=key,
-                source_id=category.source_id if category else None,
-                provenance=category.provenance.as_dict() if category else None,
+                source_id=(selected.source_id if selected else
+                           category.source_id if category else None),
+                provenance=(selected.provenance if selected and selected.provenance
+                            else provenance),
             ))
         return PromptDocument(
             fragments=tuple(fragments),
@@ -514,6 +704,8 @@ class LegacyPromptComposer:
                 "label_mode": request.label_mode,
                 "mayhem": request.mayhem,
                 "renderer_id": request.renderer_id or "legacy-text",
+                "resolved_gender": gender,
+                "slider_state": slider_state_value,
             },
         )
 

@@ -9,6 +9,7 @@ import hashlib
 import random
 
 from . import library
+from .contracts import SelectedEntry
 
 
 _STABLE_STREAM_PREFIX = "prompt-alchemy-grimoire-selection-v1"
@@ -64,6 +65,58 @@ class DeterministicSelectionService:
             return cls.rng_for_legacy_key(seed, input_key)
         return cls.rng_for_source_key(seed, source_id, stable_key)
 
+    @staticmethod
+    def _category_value(category, normalized_name, legacy_name=None, default=None):
+        value = _record_value(category, normalized_name, legacy_name)
+        return default if value is None else value
+
+    @classmethod
+    def _legacy_view(cls, category):
+        """Adapt a normalized category to the legacy line/section reader."""
+        return {
+            "key": cls._category_value(category, "input_key", "key"),
+            "id": cls._category_value(category, "id", default=""),
+            "path": cls._category_value(category, "content_path", "path"),
+            "select": cls._category_value(category, "selection_mode", "select"),
+        }
+
+    @classmethod
+    def _selected_entry(cls, category, text):
+        view = cls._legacy_view(category)
+        section = next(
+            (name for name, rows in library.read_sections(view["path"])
+             if text in rows),
+            None,
+        )
+        provenance = cls._category_value(category, "provenance")
+        if hasattr(provenance, "as_dict"):
+            provenance = provenance.as_dict()
+        return SelectedEntry(
+            text=text,
+            category_id=cls._category_value(category, "id", default=""),
+            input_key=cls._category_value(category, "input_key", "key"),
+            stable_key=cls._category_value(category, "stable_key")
+                or cls._category_value(category, "input_key", "key"),
+            source_id=cls._category_value(category, "source_id", default=""),
+            section=section,
+            provenance=provenance,
+        )
+
+    @classmethod
+    def select_legacy(cls, category, choice, seed):
+        """Return the selected legacy entry and its section without exposing I/O."""
+        view = cls._legacy_view(category)
+        text = library.draw(view, choice, cls.rng_for_category(seed, category))
+        return cls._selected_entry(category, text) if text else None
+
+    @classmethod
+    def select_random(cls, category, rng):
+        """Draw from a category with a caller-owned stream (used by Mayhem)."""
+        view = cls._legacy_view(category)
+        pool = library.read_lines(view["path"])
+        text = rng.choice(pool) if pool else None
+        return cls._selected_entry(category, text) if text else None
+
     @classmethod
     def rng_for_entry(cls, seed, source_id, category_id, entry_id):
         """Return a stream tied to an explicit, stable content-entry identity."""
@@ -75,7 +128,8 @@ class DeterministicSelectionService:
     @classmethod
     def draw_legacy(cls, category, choice, seed):
         """Apply the current line/section selection rules on the keyed stream."""
-        return library.draw(category, choice, cls.rng_for_category(seed, category))
+        selected = cls.select_legacy(category, choice, seed)
+        return selected.text if selected else None
 
 
 def get_default_selection_service():

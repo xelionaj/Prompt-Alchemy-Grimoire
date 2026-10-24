@@ -1,8 +1,7 @@
-"""Internal contracts shared by content, composition, and rendering layers.
+"""Contracts shared by content discovery, selection, composition, and rendering.
 
-These types define boundaries; prompt composition and rendering will be connected
-in later refactoring stages. The catalog adapter also exposes a legacy mapping
-view so the existing ComfyUI widgets remain unchanged during migration.
+The catalog adapter also exposes a legacy mapping view so the existing ComfyUI
+widgets remain unchanged during migration.
 """
 
 from dataclasses import dataclass, field
@@ -173,6 +172,20 @@ class CompositionRequest:
 
 
 @dataclass(frozen=True)
+class SelectedEntry:
+    """One chosen content value with its catalog identity and section context."""
+
+    text: str
+    category_id: str
+    input_key: str
+    stable_key: str
+    source_id: str
+    section: Optional[str] = None
+    entry_id: Optional[str] = None
+    provenance: Optional[Mapping[str, Any]] = None
+
+
+@dataclass(frozen=True)
 class PromptFragment:
     """One selected semantic value before renderer-specific formatting."""
 
@@ -219,6 +232,12 @@ class SelectionService(Protocol):
         ...
 
     def draw_legacy(self, category, choice, seed: int):
+        ...
+
+    def select_legacy(self, category, choice, seed: int) -> Optional[SelectedEntry]:
+        ...
+
+    def select_random(self, category, rng) -> Optional[SelectedEntry]:
         ...
 
 

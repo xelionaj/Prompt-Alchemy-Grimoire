@@ -33,3 +33,9 @@ The automated regression tests cover the five original output hashes, renderer p
 ## Substep 4.4 — Deterministic selection service
 
 `bkwildcards/selection.py` owns random-stream construction and legacy category draws. Existing category streams still use the exact `seed + (CRC32(key) & 0x7fffffff)` formula; gender, Mayhem, slider, skin-tone, and special category streams retain their previous seeds and key strings. Legacy section/file choice behavior remains delegated to the existing draw helper. New sources use the versioned SHA-256 source-key rule documented in `CONTENT-SCHEMA.md`, with a separate stable-entry-ID stream API. Selection tests compare the legacy formula and draw behavior directly, and verify qualified streams are repeatable across processes.
+
+## Substep 4.5 — Composition policies and selected entries
+
+`LegacyPromptComposer` now composes against the `CatalogSnapshot` supplied with each request. It passes normalized `CategoryRecord` values to the selection service and receives `SelectedEntry` values carrying the chosen text, category/source identity, section, and provenance. Composition has no direct content-file reads; the legacy file/section adapter stays inside `selection.py`. A fixture with an intentionally nonexistent content path verifies that the composer can use an injected catalog and selection service without opening that path.
+
+Theme/gender scope, body slider/build substitution, skin-tone coherence, cybernetic color handling, duplicate art-style removal, Bald hair suppression, and Mayhem slot composition are named policy boundaries. They preserve the legacy ordering and deterministic selection streams. `PromptDocument` remains renderer-independent; prompt labels and final plain/labeled/JSON formatting stay in the renderer. Full resolver hash regression and selection tests are the compatibility gate; PNG metadata round-trip coverage remains outstanding.
