@@ -12,9 +12,8 @@ leading underscore keeps the pack scanner from treating it as a wildcard categor
 """
 
 import os
-import random
 
-from . import library
+from . import library, selection
 
 BANK_PATH = os.path.join(library.WILDCARD_ROOT, "_skin_tones.txt")
 
@@ -142,4 +141,6 @@ def roll(seed, metatype_section, choice):
         pool = fams.get(match) if match else _group_lines(group)  # out-of-group -> group roll
     if not pool:
         return None
-    return random.Random(int(seed) + library.stable_offset(KEY)).choice(pool)
+    return selection.get_default_selection_service().rng_for_legacy_key(
+        seed, KEY
+    ).choice(pool)

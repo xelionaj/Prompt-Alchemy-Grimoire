@@ -1,9 +1,8 @@
 """Legacy wildcard prompt composition behind the PromptComposer boundary."""
 
-import random
 import re
 
-from . import catalog, library, sliders, skintones
+from . import catalog, library, selection, sliders, skintones
 from .contracts import CompositionRequest, PromptDocument, PromptFragment
 from .rendering import (
     LABEL_LABELED, LABEL_JSON, LABEL_PLAIN, LegacyTextRenderer, _format_picks,
@@ -14,6 +13,7 @@ _CATALOG = catalog.get_default_catalog().load()
 _CATEGORIES = list(_CATALOG.legacy_categories)
 _THEME_TO_PACK = _CATALOG.legacy_theme_to_pack
 _GENDERS = list(_CATALOG.genders)
+_SELECTION = selection.get_default_selection_service()
 
 # Extra gender-dropdown options beyond the pack-derived genders (Female/Male),
 # formatted to match the section dropdowns' reserved options.
@@ -185,9 +185,7 @@ def _resolve_gender(seed, gender):
     the per-category draws are unchanged). Deterministic, so preview still
     matches execution. Everything else passes through."""
     if gender == GENDER_RANDOM and _GENDERS:
-        return random.Random(
-            int(seed) + library.stable_offset("__gender_roll__")
-        ).choice(_GENDERS)
+        return _SELECTION.rng_for_legacy_key(seed, "__gender_roll__").choice(_GENDERS)
     return gender
 
 
@@ -198,8 +196,7 @@ def _preset_pick(seed, gender, choices):
     gender = _resolve_gender(seed, gender)
     active = [c for c in _CATEGORIES if c["id"] == "build" and _in_scope(c, None, gender)]
     for cat in active:
-        rng = random.Random(int(seed) + library.stable_offset(cat["key"]))
-        pick = library.draw(cat, choices.get(cat["key"]), rng)
+        pick = _SELECTION.draw_legacy(cat, choices.get(cat["key"]), seed)
         if not pick:
             continue
         section = next((name for name, rows in library.read_sections(cat["path"]) if pick in rows), None)
@@ -336,7 +333,7 @@ def _mayhem_compose(seed, choices=None):
     nothing; a specific style stays put; — random — still rolls per seed.
     """
     choices = choices or {}
-    rng = random.Random(int(seed))
+    rng = _SELECTION.rng_for_seed(seed)
     gender = rng.choice([None] + list(_GENDERS))
     # A user-SELECTED specific metatype is honoured (kept), like Art Style, so its
     # skin stays within that metatype's group; — off — / — random — let mayhem roll it.
@@ -361,8 +358,9 @@ def _mayhem_compose(seed, choices=None):
         art_cat = next((c for c in _CATEGORIES if c["key"] == akey), None)
         if not art_cat:
             continue
-        art_rng = random.Random(int(seed) + library.stable_offset(art_cat["key"]))
-        pick = library.draw(art_cat, choices.get(art_cat["key"]), art_rng)
+        pick = _SELECTION.draw_legacy(
+            art_cat, choices.get(art_cat["key"]), seed
+        )
         if pick:
             raw.append((art_cat["order"],
                         art_cat.get("prompt_label") or art_cat["label"],
@@ -374,8 +372,7 @@ def _mayhem_compose(seed, choices=None):
     # not disturb the other mayhem rolls; the skin injection below then keeps the
     # coloration inside this metatype's group.
     if honour_metatype and _METATYPE_CAT:
-        mt_rng = random.Random(int(seed) + library.stable_offset(_METATYPE_CAT["key"]))
-        mt_pick = library.draw(_METATYPE_CAT, mt_choice, mt_rng)
+        mt_pick = _SELECTION.draw_legacy(_METATYPE_CAT, mt_choice, seed)
         if mt_pick:
             raw.append((_METATYPE_CAT["order"],
                         _METATYPE_CAT.get("prompt_label") or _METATYPE_CAT["label"],
@@ -395,7 +392,7 @@ def _mayhem_compose(seed, choices=None):
     # rolled hair type/style/colour, so Mayhem never renders a half-bald head.
     bald_cat = next((c for c in _CATEGORIES if c["key"] == _BALD_KEY), None)
     if bald_cat:
-        bald_rng = random.Random(int(seed) + library.stable_offset(_BALD_KEY))
+        bald_rng = _SELECTION.rng_for_legacy_key(seed, _BALD_KEY)
         if bald_rng.random() < _MAYHEM_BALD_PROB:
             pool = library.read_lines(bald_cat["path"])
             if pool:
@@ -422,7 +419,7 @@ def _mayhem_slider_lane(seed, gender, raw):
     build = next((r for r in raw if r[3] in _BUILD_KEYS), None)
     if gender is None or build is None or sliders.BANKS is None:
         return raw, None
-    rng = random.Random(int(seed) + library.stable_offset("__mayhem_sliders__"))
+    rng = _SELECTION.rng_for_legacy_key(seed, "__mayhem_sliders__")
     register = _SLIDER_REGISTER.get(gender, _SLIDER_DEFAULT_REGISTER)
     if rng.random() < _MAYHEM_SLIDER_PROB:
         values = {axis: rng.randint(sliders.SLIDER_MIN, sliders.SLIDER_MAX)
@@ -470,8 +467,7 @@ def _compose_picks(seed, gender=None, theme=None, choices=None, mayhem=False):
     for cat in _CATEGORIES:
         if not _in_scope(cat, active_pack, gender):
             continue
-        rng = random.Random(int(seed) + library.stable_offset(cat["key"]))
-        pick = library.draw(cat, choices.get(cat["key"]), rng)
+        pick = _SELECTION.draw_legacy(cat, choices.get(cat["key"]), seed)
         if pick:
             raw.append((cat["order"], cat.get("prompt_label") or cat["label"],
                         pick, cat["key"]))

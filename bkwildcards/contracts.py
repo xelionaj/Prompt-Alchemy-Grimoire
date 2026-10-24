@@ -92,6 +92,7 @@ class CategoryRecord:
     def as_legacy_dict(self):
         return {
             "key": self.input_key,
+            "stable_key": self.stable_key,
             "pack": self.pack_id,
             "pack_label": self.pack_label,
             "is_global": self.scope_kind == "global",
@@ -196,6 +197,28 @@ class ContentCatalog(Protocol):
     """Discovers content and returns normalized records with provenance."""
 
     def load(self) -> CatalogSnapshot:
+        ...
+
+
+class SelectionService(Protocol):
+    """Creates deterministic streams for legacy and source-qualified content."""
+
+    def rng_for_seed(self, seed: int):
+        ...
+
+    def rng_for_legacy_key(self, seed: int, key: str):
+        ...
+
+    def rng_for_source_key(self, seed: int, source_id: str, stable_key: str):
+        ...
+
+    def rng_for_category(self, seed: int, category: CategoryRecord):
+        ...
+
+    def rng_for_entry(self, seed: int, source_id: str, category_id: str, entry_id: str):
+        ...
+
+    def draw_legacy(self, category, choice, seed: int):
         ...
 
 

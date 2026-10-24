@@ -22,10 +22,14 @@ After adding the catalog boundary, all five captured output hashes, output lengt
 
 ## Live workflow check
 
-The user's ArtForm Krea 2 workflow ran successfully twice before the source extraction in this stage. With only Gender enabled, the selector resolved `gender: a feminine adult`. With Environment temporarily set to random, it resolved a `scene/background` fragment (a holo-development studio and volumetric wireframe model), and one image was generated. The setting was restored to off and the workflow was not saved. This confirms the installed node's execution path and wildcard contribution before the Python module move.
+The user's ArtForm Krea 2 workflow ran successfully twice before the source extraction and once after ComfyUI restarted with the split modules. The post-restart run resolved a seeded art-style fragment plus `gender: a feminine adult` and generated one image. The workflow's output folder was configured by the user.
 
 ## PromptComposer and renderer extraction
 
 The legacy selection logic now lives in `bkwildcards/composition.py` behind `LegacyPromptComposer`; ordered semantic fragments are formatted by `bkwildcards/rendering.py` through `LegacyTextRenderer`. `nodes.py` constructs a `CompositionRequest` and delegates through both interfaces. `nodes.resolve_prompt` remains as a compatibility facade for the route and existing callers.
 
-The five automated regression tests cover the five original output hashes, renderer parity, repeated and cross-process fixed-seed output, Mayhem seed sensitivity and cross-theme picks, random Environment composition, `build()` integration, and the saved-workflow node/widget contract. The current ComfyUI process was not restarted after the module extraction, so live execution of the newly split modules and PNG metadata round-trip still need a post-restart check.
+The automated regression tests cover the five original output hashes, renderer parity, repeated and cross-process fixed-seed output, Mayhem seed sensitivity and cross-theme picks, random Environment composition, `build()` integration, the saved-workflow node/widget contract, and deterministic stream compatibility. PNG metadata round-trip coverage remains outstanding.
+
+## Substep 4.4 — Deterministic selection service
+
+`bkwildcards/selection.py` owns random-stream construction and legacy category draws. Existing category streams still use the exact `seed + (CRC32(key) & 0x7fffffff)` formula; gender, Mayhem, slider, skin-tone, and special category streams retain their previous seeds and key strings. Legacy section/file choice behavior remains delegated to the existing draw helper. New sources use the versioned SHA-256 source-key rule documented in `CONTENT-SCHEMA.md`, with a separate stable-entry-ID stream API. Selection tests compare the legacy formula and draw behavior directly, and verify qualified streams are repeatable across processes.

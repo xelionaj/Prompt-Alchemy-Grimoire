@@ -161,6 +161,13 @@ Current draws create `random.Random(seed + (CRC32(category_key) & 0x7FFFFFFF))` 
 - section labels are user-facing workflow values and should be migrated or aliased if renamed;
 - any new entry-level randomization must use stable entry IDs and a documented deterministic algorithm.
 
+The implementation boundary is `bkwildcards.selection.DeterministicSelectionService`:
+
+- Legacy categories continue to use `random.Random(seed + (CRC32(legacy_category_key) & 0x7FFFFFFF))`; the category's legacy key remains its `stable_key` during compatibility operation.
+- New category streams use SHA-256 over the UTF-8 tuple `prompt-alchemy-grimoire-selection-v1`, `source_id`, and `stable_key`, separated by NUL bytes. The first eight digest bytes are interpreted as an unsigned big-endian integer and added to the user seed before constructing `random.Random`.
+- A future entry-level stream uses the same algorithm and source ID, with stable key `entry:<category_id>:<entry_id>`. Entry IDs must be immutable within their category; labels, text, ordering, and UI position are not identity.
+- The Mayhem sequential stream remains `random.Random(seed)`, and existing special-purpose legacy streams keep their current magic keys. This keeps this extraction behavior-neutral while making the identity rules explicit for later content providers.
+
 A schema migration should accept both legacy and versioned roots, convert both to one normalized in-memory model, and leave old input names and saved choices usable. The legacy reader should remain the fallback until the normalized model reproduces current theme/gender filtering, section choices, output order, and per-category deterministic draws.
 
 ## Out of scope for this step

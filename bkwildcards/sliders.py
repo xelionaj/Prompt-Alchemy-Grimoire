@@ -41,9 +41,8 @@ that rendered.
 
 import json
 import os
-import random
 
-from . import library
+from . import library, selection
 
 BANKS_PATH = os.path.join(library.WILDCARD_ROOT, "_body_sliders.json")
 
@@ -158,7 +157,9 @@ def roll_values(seed):
     and independent of every category's draw)."""
     out = {}
     for axis in AXES:
-        rng = random.Random(int(seed) + library.stable_offset(AXIS_INPUTS[axis]))
+        rng = selection.get_default_selection_service().rng_for_legacy_key(
+            seed, AXIS_INPUTS[axis]
+        )
         out[axis] = rng.randint(SLIDER_MIN, SLIDER_MAX)
     return out
 
