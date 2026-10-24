@@ -15,7 +15,7 @@ This is the pre-refactor baseline for stages 4.1–4.3. Resolver hashes were cap
 
 ## Substep 4.1 coverage
 
-The five captured scenarios cover a fixed-gender theme with section selections, seed-random gender and metatype, Fluid scope and plain output, cross-theme Mayhem and JSON formatting, and slider/skin-tone/Bald interaction. Static contracts above cover discovery, widget keys and visibility, labeled output, and preview/persistence behavior. A live Krea 2 workflow check is recorded below; PNG metadata round-trip coverage remains outstanding.
+The five captured scenarios cover a fixed-gender theme with section selections, seed-random gender and metatype, Fluid scope and plain output, cross-theme Mayhem and JSON formatting, and slider/skin-tone/Bald interaction. Static contracts above cover discovery, widget keys and visibility, labeled output, and preview/persistence behavior. Live Krea 2 workflow and PNG metadata round-trip checks are recorded below.
 ## Post-4.3 comparison
 
 After adding the catalog boundary, all five captured output hashes, output lengths, and slider states still matched. The refactored catalog exposes 14 packs and 56 categories; the layout payload exposes the same 56 categories and retains the legacy theme list and label-to-pack mapping. This was a focused baseline comparison using the installed Python interpreter, not a ComfyUI UI/PNG round-trip test.
@@ -28,7 +28,7 @@ The user's ArtForm Krea 2 workflow ran successfully twice before the source extr
 
 The legacy selection logic now lives in `bkwildcards/composition.py` behind `LegacyPromptComposer`; ordered semantic fragments are formatted by `bkwildcards/rendering.py` through `LegacyTextRenderer`. `nodes.py` constructs a `CompositionRequest` and delegates through both interfaces. `nodes.resolve_prompt` remains as a compatibility facade for the route and existing callers.
 
-The automated regression tests cover the five original output hashes, renderer parity, repeated and cross-process fixed-seed output, Mayhem seed sensitivity and cross-theme picks, random Environment composition, `build()` integration, the saved-workflow node/widget contract, and deterministic stream compatibility. PNG metadata round-trip coverage remains outstanding.
+The automated regression tests cover the five original output hashes, renderer parity, repeated and cross-process fixed-seed output, Mayhem seed sensitivity and cross-theme picks, random Environment composition, `build()` integration, the saved-workflow node/widget contract, and deterministic stream compatibility. PNG metadata replay findings are recorded in substep 4.6 below.
 
 ## Substep 4.4 — Deterministic selection service
 
@@ -38,4 +38,12 @@ The automated regression tests cover the five original output hashes, renderer p
 
 `LegacyPromptComposer` now composes against the `CatalogSnapshot` supplied with each request. It passes normalized `CategoryRecord` values to the selection service and receives `SelectedEntry` values carrying the chosen text, category/source identity, section, and provenance. Composition has no direct content-file reads; the legacy file/section adapter stays inside `selection.py`. A fixture with an intentionally nonexistent content path verifies that the composer can use an injected catalog and selection service without opening that path.
 
-Theme/gender scope, body slider/build substitution, skin-tone coherence, cybernetic color handling, duplicate art-style removal, Bald hair suppression, and Mayhem slot composition are named policy boundaries. They preserve the legacy ordering and deterministic selection streams. `PromptDocument` remains renderer-independent; prompt labels and final plain/labeled/JSON formatting stay in the renderer. Full resolver hash regression and selection tests are the compatibility gate; PNG metadata round-trip coverage remains outstanding.
+Theme/gender scope, body slider/build substitution, skin-tone coherence, cybernetic color handling, duplicate art-style removal, Bald hair suppression, and Mayhem slot composition are named policy boundaries. They preserve the legacy ordering and deterministic selection streams. `PromptDocument` remains renderer-independent; prompt labels and final plain/labeled/JSON formatting stay in the renderer. Full resolver hash regression and selection tests are the compatibility gate; direct UI graph reimport is tracked in substep 4.6.
+
+## Substep 4.6 — PNG metadata and replay checkpoint
+
+After the ComfyUI restart, the live ArtForm Krea 2 graph completed and saved `image_2026-10-25_058.png` (1920 × 1088). The PNG contains both standard ComfyUI metadata fields, `workflow` and `prompt`. The decoded UI workflow is valid JSON with graph ID `3115e113-0ba0-41f1-b2f8-8748c42a06cd`, 22 nodes, and the `BKWildcardSelector` node. The decoded API prompt has 16 nodes, including `BKWildcardSelector` and the `PixaromaResolution` node's `ResolutionState` input.
+
+The PNG was opened directly in ComfyUI through **File → Open**. ComfyUI created a new `image_2026-10-25_058` workflow tab; the imported graph retained the custom selector and its resolved prompt. This confirms full workflow metadata can be reimported from the saved PNG. The embedded API prompt was also extracted and submitted to the running ComfyUI; it completed and generated `image_2026-10-25_059.png`, confirming that the prompt payload can be replayed with the custom node after restart. That API-format replay output contains a `prompt` field but no `workflow` field, as expected for an API prompt submission.
+
+Submitting the extracted UI workflow JSON through the `run_workflow` adapter failed at third-party node `PixaromaResolution`: `get_resolution()` was called without its required `ResolutionState` argument. The PNG's embedded API prompt contains that state, the original UI graph run succeeded, and direct PNG import in ComfyUI succeeded. The failure is specific to the adapter's UI-graph-to-API conversion path, not the PNG save or ComfyUI UI importer. **Status:** PNG metadata save, direct UI graph import, and embedded-prompt replay are verified. The separate adapter conversion failure is documented for future tooling investigation.
